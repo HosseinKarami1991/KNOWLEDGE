@@ -47,7 +47,6 @@ int main(int argc, char **argv)
 	readPointsVector(pointPath);
 
 
-
 	ros::ServiceServer service = nh.advertiseService("knowledgeService",KnowledgeQuery);
 
 	cout << "*****************" << endl;
@@ -284,7 +283,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	knowledge_msgs::Region region;
 	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
-	if(type=="object")
+	if(type=="Object")
 	{
 		if(requestInfo=="graspPose")
 		{
@@ -336,7 +335,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			cout<<"The request info is wrong: "<<requestInfo <<endl;
 		}
 	}
-	else if(type=="point")
+	else if(type=="Point")
 	{
 
 		for(int i=0;i<pointsVector.size();i++)
