@@ -18,7 +18,7 @@ using namespace pitt_msgs;
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
 vector<Point> pointsVector;
 
-int NumberSphere=2, NumberCylinder=2, NumberUnknown=0, NumberCone=0,NumberPlane=0;
+int NumberSphere=0, NumberCylinder=0, NumberUnknown=0, NumberCone=0,NumberPlane=0;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -276,10 +276,14 @@ void readPointsVector(string pointsPath){
 //***************************************************************************
 
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
+	cout<<"A Knowledge Query is arrived:"<<endl;
 
 	string name=req.Name;
 	string type=req.reqType;
 	string requestInfo=req.requestInfo;
+
+	cout<<"name: "<<name<<", type: "<<type<<", requestInfo: "<<requestInfo<<endl;
+
 	knowledge_msgs::Region region;
 	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
