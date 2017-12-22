@@ -346,7 +346,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 		{
 			if(name==pointsVector[i].name)
 			{
-				for(int j=0;j<6;j++)
+				for(int j=0;j<pointsVector[i].pose.size();j++)
 				{
 					res.pose.push_back(pointsVector[i].pose[j]);
 				}
