@@ -1,8 +1,9 @@
 #input
 string reqType		# object/point
 string Name  	
-string requestInfo # graspPose/boundingBox/ boundingSphere/ ...
+string requestInfo # graspPose/graspPoseName/boundingBox/ boundingSphere/ ...
 ---
 # Output
 float64[] pose
 Region[] region
+string[] names

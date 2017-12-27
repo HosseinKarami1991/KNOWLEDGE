@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   baxter_core_msgs
   message_generation
   std_msgs
+	pitt_msgs
 	knowledge_msgs
 
 )
@@ -31,7 +32,7 @@ include_directories(
 
 #Is for add the .o files to devel/lib
 
-catkin_package(  CATKIN_DEPENDS baxter_core_msgs message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs)
+catkin_package(  CATKIN_DEPENDS baxter_core_msgs message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs pitt_msgs)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -51,12 +52,12 @@ add_library(Objects include/Objects.cpp)
 # name  name.cpp
 add_executable(knowledge src/knowledge_main.cpp )
 
-add_dependencies(knowledge baxter_core_msgs_generate_messages_cpp  geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp)
+add_dependencies(knowledge baxter_core_msgs_generate_messages_cpp  geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(knowledge
    ${catkin_LIBRARIES}
 Objects
 #Points
  )
-#target_link_libraries(andor_aograph andor_aonode)
+#target_link_libraries(andor_aograph pitt_msgs)
 
