@@ -1,1 +1,4 @@
 [point name] float[6]
+
+for the bimanual(joint) action:
+[point name] [wTo] [wTg]

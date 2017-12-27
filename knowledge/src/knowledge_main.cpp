@@ -18,7 +18,7 @@ using namespace pitt_msgs;
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
 vector<Point> pointsVector;
 
-int NumberSphere=2, NumberCylinder=2, NumberUnknown=0, NumberCone=0,NumberPlane=0;
+int NumberSphere=0, NumberCylinder=0, NumberUnknown=0, NumberCone=0,NumberPlane=0;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -45,7 +45,6 @@ int main(int argc, char **argv)
 	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points.txt";
 
 	readPointsVector(pointPath);
-
 
 
 	ros::ServiceServer service = nh.advertiseService("knowledgeService",KnowledgeQuery);
@@ -277,14 +276,18 @@ void readPointsVector(string pointsPath){
 //***************************************************************************
 
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
+	cout<<"A Knowledge Query is arrived:"<<endl;
 
 	string name=req.Name;
 	string type=req.reqType;
 	string requestInfo=req.requestInfo;
+
+	cout<<"name: "<<name<<", type: "<<type<<", requestInfo: "<<requestInfo<<endl;
+
 	knowledge_msgs::Region region;
 	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
-	if(type=="object")
+	if(type=="Object")
 	{
 		if(requestInfo=="graspPose")
 		{
@@ -336,14 +339,14 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			cout<<"The request info is wrong: "<<requestInfo <<endl;
 		}
 	}
-	else if(type=="point")
+	else if(type=="Point")
 	{
 
 		for(int i=0;i<pointsVector.size();i++)
 		{
 			if(name==pointsVector[i].name)
 			{
-				for(int j=0;j<6;j++)
+				for(int j=0;j<pointsVector[i].pose.size();j++)
 				{
 					res.pose.push_back(pointsVector[i].pose[j]);
 				}
