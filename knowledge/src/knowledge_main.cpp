@@ -7,6 +7,7 @@
 #include <geometry_msgs/Vector3.h>
 #include <knowledge_msgs/knowledgeSRV.h>
 #include <boost/algorithm/string.hpp>
+#include <std_msgs/Float64MultiArray.h>
 
 typedef ::pitt_msgs::TrackedShapes_<std::allocator<void> > TrackedShapes;
 typedef ::pitt_msgs::TrackedShape_<std::allocator<void> > TrackedShape;
@@ -16,6 +17,7 @@ using namespace pitt_msgs;
 
 // global variables:
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
+float init_q_[2][7];
 vector<Point> pointsVector;
 
 int NumberSphere=0, NumberCylinder=0, NumberUnknown=0, NumberCone=0,NumberPlane=0;
@@ -24,6 +26,8 @@ bool obj_call_back_flag=true;
 float perception_regionOperating[6];
 
 // functions Def:
+void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg);
+void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg);
 void CallBackShapes(const TrackedShapes& outShapes);
 
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
@@ -40,6 +44,9 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 
 	ros::Subscriber sub_shapes =nh.subscribe("ransac_segmentation/trackedShapes",10, CallBackShapes);
+	ros::Subscriber sub_LeftQ  =nh.subscribe("Q_leftArm" ,10, CallBackJointValues_LeftArm);
+	ros::Subscriber sub_RightQ =nh.subscribe("Q_rightArm",10, CallBackJointValues_RightArm);
+
 	const char* home=getenv("HOME");
 	string pointPath(home);
 	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points.txt";
@@ -57,6 +64,20 @@ int main(int argc, char **argv)
 }
 
 
+void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
+	for (int i=0;i<7;i++)
+		init_q_[0][i]=msg.data[i];
+
+};
+
+void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
+	for (int i=0;i<7;i++)
+		init_q_[1][i]=msg.data[i];
+
+};
+
+//********************************************************************************
+//********************************************************************************
 void CallBackShapes(const TrackedShapes& outShapes){
 	TrackedShape::Ptr outShape ( new TrackedShape);
 	int obj_counter=0; //! No of objects that ransac recognize and is not unknown
@@ -354,7 +375,32 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 
 		}
 	}
-	else{
+	else if(type=="JointValues")
+	{
+		string delim_type="+";
+		vector<string> agents_vector;
+		boost::split(agents_vector, requestInfo, boost::is_any_of(delim_type));
+		for(int i=0;i<agents_vector.size();i++)
+		{
+			region.data.clear();
+			if(agents_vector[i]=="LeftArm")
+				for(int j=0;j<7;j++)
+					region.data.push_back(init_q_[0][i]);
+
+			else if(agents_vector[i]=="RightArm")
+				for(int j=0;j<7;j++)
+					region.data.push_back(init_q_[1][i]);
+
+			else
+				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;
+
+			res.region.push_back(region);
+		}
+
+
+	}
+	else
+	{
 		cout<<"Request type is wrong:"<<type<<endl;
 	}
 
