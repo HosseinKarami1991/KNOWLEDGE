@@ -9,6 +9,15 @@
 #include <boost/algorithm/string.hpp>
 #include <std_msgs/Float64MultiArray.h>
 
+#define RST  "\x1B[0m"
+#define KBLU  "\x1B[34m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define FBLU(x) KBLU x RST
+#define FRED(x) KRED x RST
+#define FGRN(x) KGRN x RST
+#define BOLD(x) "\x1B[1m" x RST
+
 typedef ::pitt_msgs::TrackedShapes_<std::allocator<void> > TrackedShapes;
 typedef ::pitt_msgs::TrackedShape_<std::allocator<void> > TrackedShape;
 
@@ -49,7 +58,7 @@ int main(int argc, char **argv)
 
 	const char* home=getenv("HOME");
 	string pointPath(home);
-	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points.txt";
+	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TRANSPORT.txt";
 
 	readPointsVector(pointPath);
 
@@ -68,12 +77,22 @@ void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
 		init_q_[0][i]=msg.data[i];
 
+//	cout<<"call back: left Arm q: ";
+//	for (int i=0;i<7;i++)
+//		cout<<init_q_[0][i]<<" ";
+//	cout<<endl;
+
+
 };
 
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
 		init_q_[1][i]=msg.data[i];
 
+//	cout<<"call back: right Arm q: ";
+//	for (int i=0;i<7;i++)
+//		cout<<init_q_[1][i]<<" ";
+//	cout<<endl;
 };
 
 //********************************************************************************
@@ -297,10 +316,10 @@ void readPointsVector(string pointsPath){
 //***************************************************************************
 
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
-	cout<<"A Knowledge Query is arrived:"<<endl;
+	cout<<FBLU(BOLD("A Knowledge Query is arrived:"))<<endl;
 
-	string name=req.Name;
 	string type=req.reqType;
+	string name=req.Name;
 	string requestInfo=req.requestInfo;
 
 	cout<<"name: "<<name<<", type: "<<type<<", requestInfo: "<<requestInfo<<endl;
@@ -308,7 +327,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	knowledge_msgs::Region region;
 	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
-	if(type=="Object")
+	if(type.find("Object") != std::string::npos)
 	{
 		if(requestInfo=="graspPose")
 		{
@@ -360,22 +379,27 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			cout<<"The request info is wrong: "<<requestInfo <<endl;
 		}
 	}
-	else if(type=="Point")
+	else if(type.find("Point") != std::string::npos)
 	{
 
 		for(int i=0;i<pointsVector.size();i++)
 		{
-			if(name==pointsVector[i].name)
+			if(type==pointsVector[i].name)
 			{
 				for(int j=0;j<pointsVector[i].pose.size();j++)
 				{
 					res.pose.push_back(pointsVector[i].pose[j]);
 				}
+				cout<<pointsVector[i].name<<" ";
+				for(int j=0;j<pointsVector[i].pose.size();j++)
+					cout<<pointsVector[i].pose[j]<<" ";
+				cout<<endl;
+				break;
 			}
 
 		}
 	}
-	else if(type=="JointValues")
+	else if(type.find("JointValues") != std::string::npos)
 	{
 		string delim_type="+";
 		vector<string> agents_vector;
@@ -385,17 +409,27 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			region.data.clear();
 			if(agents_vector[i]=="LeftArm")
 				for(int j=0;j<7;j++)
-					region.data.push_back(init_q_[0][i]);
+					region.data.push_back(init_q_[0][j]);
 
 			else if(agents_vector[i]=="RightArm")
 				for(int j=0;j<7;j++)
-					region.data.push_back(init_q_[1][i]);
+					region.data.push_back(init_q_[1][j]);
 
 			else
 				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;
 
 			res.region.push_back(region);
 		}
+
+		cout<<"left Arm q: ";
+		for (int i=0;i<res.region[0].data.size();i++)
+			cout<<res.region[0].data[i]<<" ";
+		cout<<endl;
+		cout<<"right Arm q: ";
+		for (int i=0;i<res.region[1].data.size();i++)
+			cout<<res.region[1].data[i]<<" ";
+		cout<<endl;
+
 
 
 	}
