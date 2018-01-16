@@ -7,17 +7,18 @@
 
 #include "Objects.hpp"
 
-void pittObjects::Sphere::BoundingBox(float * boundingBox){
+void pittObjects::Sphere::BoundingBox(void){
 	cout<<"Sphere::BoundingBox"<<endl;
 	boundingBox[0]=trackedShape.x_est_centroid; //! center_x
 	boundingBox[1]=trackedShape.y_est_centroid;//! center_y
 	boundingBox[2]=trackedShape.z_est_centroid;//! center_z
+
 	boundingBox[3]=trackedShape.coefficients[3]*2.0*obstacleSafetyFactorX;//! size_x,
 	boundingBox[4]=trackedShape.coefficients[3]*2.0*obstacleSafetyFactorY;//! size_y
 	boundingBox[5]=trackedShape.coefficients[3]*2.0*obstacleSafetyFactorZ;//! size_z
 }
 
-void pittObjects::Sphere::BoundingBall(float* boundingBall){
+void pittObjects::Sphere::BoundingBall(void){
 	cout<<"Sphere::BoundingBall"<<endl;
 	boundingBall[0]=trackedShape.x_est_centroid; //! center_x
 	boundingBall[1]=trackedShape.y_est_centroid;//! center_y
@@ -25,7 +26,7 @@ void pittObjects::Sphere::BoundingBall(float* boundingBall){
 	boundingBall[3]=trackedShape.coefficients[3]*2.0*obstacleSafetyFactor;//! size_x,
 }
 
-void pittObjects::Sphere::GraspingPosition(float * graspPose,float * pathPlanningPose, string graspingPosDef="top" ){
+void pittObjects::Sphere::GraspingPosition(void){
 	cout<<"Sphere::GraspingPosition"<<endl;
 	/*! Grasping Pose is computed from top of the sphere considering
 	 * x axis object = x axis gripper ~ PI (3.14) : Roll
@@ -35,87 +36,67 @@ void pittObjects::Sphere::GraspingPosition(float * graspPose,float * pathPlannin
 	 * y center object grasp= y position gripper
 	 * z center object grasp= z position gripper
 	 *  */
+
+	float graspPose[6]; float approachingPose[6];
+	//RM_: rotation matrix;
+	// object CenterFrame rotation matrix, which is parallel to the world frame for the sphere
+	Eigen::Matrix3f RM_World2Object;
+	for (int i=1;i<4;i++)
+		for (int j=1;j<4;j++)
+			if (i==j)
+				RM_World2Object(i-1,j-1)=1.0;
+			else
+				RM_World2Object(i-1,j-1)=0.0;
+
 	Eigen::Vector3f Vec_ObjectFr2GraspFr, grasping_EulerAngles; // YPR
 	Vec_ObjectFr2GraspFr<< 3.14, 0.0, 3.14;
 	Eigen::Matrix3f ROtMat_ObjectFr2GraspFr, RotMat_world2Grasping;
 	ROtMat_ObjectFr2GraspFr = Eigen::AngleAxisf(Vec_ObjectFr2GraspFr(0), Eigen::Vector3f::UnitZ())
-	  * Eigen::AngleAxisf(Vec_ObjectFr2GraspFr(1), Eigen::Vector3f::UnitY())
-	  * Eigen::AngleAxisf(Vec_ObjectFr2GraspFr(2), Eigen::Vector3f::UnitX());
+	* Eigen::AngleAxisf(Vec_ObjectFr2GraspFr(1), Eigen::Vector3f::UnitY())
+	* Eigen::AngleAxisf(Vec_ObjectFr2GraspFr(2), Eigen::Vector3f::UnitX());
 
-	RotMat_world2Grasping= RotMat_World2Obj*ROtMat_ObjectFr2GraspFr;
+	RotMat_world2Grasping= RM_World2Object*ROtMat_ObjectFr2GraspFr;
 	grasping_EulerAngles=RotMat_world2Grasping.eulerAngles(2,1,0);
 	cout<<"Eigen::grasping_EulerAngles:\n"<<grasping_EulerAngles<<endl;
 
-	graspPose[0]=grasping_EulerAngles(0); //Y
-	graspPose[1]=grasping_EulerAngles(1);  //P
-	graspPose[2]=grasping_EulerAngles(2);  //R
-	graspPose[3]=objFrame[3];
-	graspPose[4]=objFrame[4];
-	graspPose[5]=objFrame[5];
-	cout<<"Grasping vector: "<<endl;
-	for (int i=0;i<6;i++)
-		cout<<graspPose[i]<<" ";
-	cout<<endl;
+	float graspingPose[6];
+	graspingPose[0]=grasping_EulerAngles(0); //Y
+	graspingPose[1]=grasping_EulerAngles(1);  //P
+	graspingPose[2]=grasping_EulerAngles(2);  //R
+	graspingPose[3]=objFrame[3];
+	graspingPose[4]=objFrame[4];
+	graspingPose[5]=objFrame[5];
+
+	class Frame tempGrapsingFrame("graspingPose1",graspingPose);
+	objectFrames.push_back(tempGrapsingFrame);
 
 
-	pathPlanningPose[0]=graspPose[0]; //Y
-	pathPlanningPose[1]=graspPose[1];// P
-	pathPlanningPose[2]=graspPose[2];// R
+	approachingPose[0]=graspPose[0]; //Y
+	approachingPose[1]=graspPose[1];// P
+	approachingPose[2]=graspPose[2];// R
 
-	pathPlanningPose[3]=graspPose[3]-RotMat_world2Grasping(0,2)*GraspPoseDistance;
-	pathPlanningPose[4]=graspPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
-	pathPlanningPose[5]=graspPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
+	approachingPose[3]=graspPose[3]-RotMat_world2Grasping(0,2)*GraspPoseDistance;
+	approachingPose[4]=graspPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
+	approachingPose[5]=graspPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
 
-
-	cout<<"objectFinalPathPlanningPose: "<<endl;
-		for (int i=0;i<6;i++)
-			cout<<pathPlanningPose[i]<<" ";
-		cout<<endl;
-
-//
-//		computation based on eigen library:
-
+	class Frame tempApproachingFrame("approachingPose1",approachingPose);
+	objectFrames.push_back(tempApproachingFrame);
 
 }
 
 void pittObjects::Sphere::FrameSet(void){
 	cout<<"Sphere::FrameSet"<<endl;
 	cout<<"Frame=> parallel to World Frame"<<endl;
-//	Eigen::Matrix3f RotMat_World2Obj;
-	objFrame[0]=0.0; //Y
-	objFrame[1]=0.0; //P
-	objFrame[2]=0.0; //R
-	objFrame[3]=trackedShape.x_est_centroid;
-	objFrame[4]=trackedShape.y_est_centroid;
-	objFrame[5]=trackedShape.z_est_centroid;
-	for (int i=1;i<4;i++)
-		for (int j=1;j<4;j++)
-			if (i==j){
-//				RotMat_W2Obj(i,j)=1.0;
-				RotMat_World2Obj(i-1,j-1)=1.0;
-			}
-			else{
-//				RotMat_W2Obj(i,j)=0.0;
-				RotMat_World2Obj(i-1,j-1)=0.0;
-			}
-//	RotMat_W2Obj.PrintMtx("Rotation Matrix Frame: ");
-	cout<<"Eigen::RotMat_World2Obj:\n"<<RotMat_World2Obj<<endl;
-//	CMAT::Vect3 EulerAngles;
-//	EulerAngles=RotMat_W2Obj.RPY2vect(); //[yaw, -pitch, roll]
-//	EulerAngles.Transpose().PrintMtx("Euler Angles (Y -P R):");
-//	RotMat_W2Obj.RPY2vect().Transpose().PrintMtx("Euler Angles (Y -P R):");
+
+	float tempObjFrame[]={0.0, 0.0, 0.0,trackedShape.x_est_centroid,trackedShape.y_est_centroid,trackedShape.z_est_centroid };
+	class Frame tempFrame("centerFrame",tempObjFrame);
+	objectFrames.push_back(tempFrame);
 
 }
-int pittObjects::Sphere::RobotResponsibleArm(void){
-	cout<<"Sphere::RobotResponsibleArm"<<endl;
-		if (objFrame[4]>=0)
-			return 0;
-		else
-			return 1;
-}
+
 // =======================================
 
-void pittObjects::Cylinder::BoundingBox(float * boundingBox){
+void pittObjects::Cylinder::BoundingBox(void){
 	cout<<"Cylinder::BoundingBox"<<endl;
 	/*!
 	 * rrt* method accept boxes just parallel to x,y,z axis of the world
@@ -147,12 +128,28 @@ void pittObjects::Cylinder::BoundingBox(float * boundingBox){
 
 }
 
-void pittObjects::Cylinder::BoundingBall(float* boundingBall){
+void pittObjects::Cylinder::BoundingBall(void){
 	cout<<"Cylinder::BoundingBall"<<endl;
+	float height, radius, normalAxis[3], ballRadius;
+	radius= trackedShape.coefficients[6];
+	height= trackedShape.coefficients[7];
+	normalAxis[0]=trackedShape.coefficients[3];
+	normalAxis[1]=trackedShape.coefficients[4];
+	normalAxis[2]=trackedShape.coefficients[5];
+
+	ballRadius=sqrt(height*height/4+radius*radius);
+
+	boundingBall[0]=trackedShape.x_est_centroid;//! center_x
+	boundingBall[1]=trackedShape.y_est_centroid;//! center_y
+	boundingBall[2]=trackedShape.z_est_centroid;//! center_z
+	boundingBall[3]=ballRadius*2.0*obstacleSafetyFactor;//! Diameter,
+
 }
 
-void pittObjects::Cylinder::GraspingPosition(float * graspPose,float * pathPlanningPose, string graspingPosDef="top" ){
+void pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"Cylinder::GraspingPosition"<<endl;
+
+	float graspPose[6]; float approachingPose[6];
 
 	Eigen::Vector3f Vec_ObjFr2GraspFr, vec_Grasping; //YPR
 	Eigen::Matrix3f Rot_Obj2Grasp, Rot_Grasping,RotMat;
@@ -181,145 +178,123 @@ void pittObjects::Cylinder::GraspingPosition(float * graspPose,float * pathPlann
 	cout<<endl;
 
 	cout<<"********"<<endl;
- 	 */
+	 */
 
 
 
-		radius= trackedShape.coefficients[6];
-		height= trackedShape.coefficients[7];
-		normalAxis[0]=trackedShape.coefficients[3];
-		normalAxis[1]=trackedShape.coefficients[4];
-		normalAxis[2]=trackedShape.coefficients[5];
-		cout<<"-------------------"<<endl;
-		cout<<"RADIUS:"<<radius<<" HEIGHT:"<<height<<endl;
-		cout<<"-------------------"<<endl;
+	radius= trackedShape.coefficients[6];
+	height= trackedShape.coefficients[7];
+	normalAxis[0]=trackedShape.coefficients[3];
+	normalAxis[1]=trackedShape.coefficients[4];
+	normalAxis[2]=trackedShape.coefficients[5];
+	cout<<"-------------------"<<endl;
+	cout<<"RADIUS:"<<radius<<" HEIGHT:"<<height<<endl;
+	cout<<"-------------------"<<endl;
 	float VERTICAL_THRESHOLD=0.99;
 	float VERTICAL_GRASPING_POINT_THRESHOLD=0.05;// 5 cm from top we grasp the object
-		/*!
-		 * o if the cylinder is vertical:
-		 * 	- vertical cylinder means normalAxis[2]>0.99
-		 * 		in this case we grasp the cylinder from top like a sphere from top
-		 * 	- we grasp it 5 cm from top
-		 *
-		 * o if the cylinder is not vertical:
-		 *  - non vertical cylinder means normalAxis[2]<0.99
-		 * 	- we should do some experiments and check for checking sign of biggest normal value, being positive or negative
-		 * 		and its relation to success of grasping.
-		 *
-		 *
-		 * */
-		if (abs(normalAxis[2])> VERTICAL_THRESHOLD){
-			if (normalAxis[2]<0)
-				for (int i=0;i<3;i++)
-					normalAxis[i]=normalAxis[i]*(-1.0);
+	/*!
+	 * o if the cylinder is vertical:
+	 * 	- vertical cylinder means normalAxis[2]>0.99
+	 * 		in this case we grasp the cylinder from top like a sphere from top
+	 * 	- we grasp it 5 cm from top
+	 *
+	 * o if the cylinder is not vertical:
+	 *  - non vertical cylinder means normalAxis[2]<0.99
+	 * 	- we should do some experiments and check for checking sign of biggest normal value, being positive or negative
+	 * 		and its relation to success of grasping.
+	 *
+	 *
+	 * */
+	if (abs(normalAxis[2])> VERTICAL_THRESHOLD)
+	{
+		if (normalAxis[2]<0)
+			for (int i=0;i<3;i++)
+				normalAxis[i]=normalAxis[i]*(-1.0);
 
-			graspPose[0]=3.14; //Y
-			graspPose[1]=0.0;  //P
-			graspPose[2]=3.14;  //R
+		graspPose[0]=3.14; //Y
+		graspPose[1]=0.0;  //P
+		graspPose[2]=3.14;  //R
 
-			graspPose[3]=objFrame[3]+normalAxis[0]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
-			graspPose[4]=objFrame[4]+normalAxis[1]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
-			graspPose[5]=objFrame[5]+normalAxis[2]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
+		graspPose[3]=objFrame[3]+normalAxis[0]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
+		graspPose[4]=objFrame[4]+normalAxis[1]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
+		graspPose[5]=objFrame[5]+normalAxis[2]*(height/2.0 - VERTICAL_GRASPING_POINT_THRESHOLD);
 
-			pathPlanningPose[0]=graspPose[0]; //Y
-			pathPlanningPose[1]=graspPose[1];// P
-			pathPlanningPose[2]=graspPose[2];// R
+		approachingPose[0]=graspPose[0]; //Y
+		approachingPose[1]=graspPose[1];// P
+		approachingPose[2]=graspPose[2];// R
 
-			pathPlanningPose[3]=graspPose[3]+normalAxis[0]*GraspPoseDistance;
-			pathPlanningPose[4]=graspPose[4]+normalAxis[1]*GraspPoseDistance;
-			pathPlanningPose[5]=graspPose[5]+normalAxis[2]*GraspPoseDistance;
+		approachingPose[3]=graspPose[3]+normalAxis[0]*GraspPoseDistance;
+		approachingPose[4]=graspPose[4]+normalAxis[1]*GraspPoseDistance;
+		approachingPose[5]=graspPose[5]+normalAxis[2]*GraspPoseDistance;
+	}
 
-			cout<<"vertical cylinder"<<endl;
-			cout<<"Grasping vector: "<<endl;
-			for (int i=0;i<6;i++)
-				cout<<graspPose[i]<<" ";
-			cout<<endl;
+	else
+	{
+		Eigen::Vector3f RefPoint,ObjPoint;
+		Eigen::Vector3f X_grasp, zPrime,Y_grasp,Z_grasp, EulerAngles;
+		ObjPoint(0)=objFrame[3];ObjPoint(1)= objFrame[4];ObjPoint(2)= objFrame[5];
+		RefPoint(0)=0.0; RefPoint(1)=0.0; RefPoint(2)=5.0;
 
-			cout<<"objectFinalPathPlanningPose: "<<endl;
-			for (int i=0;i<6;i++)
-				cout<<pathPlanningPose[i]<<" ";
-			cout<<endl;
+		if (normalAxis[0]>0)
+			for (int i=0;i<3;i++)
+				normalAxis[i]=normalAxis[i]*(-1.0);
 
+		X_grasp(0)=normalAxis[0];
+		X_grasp(1)=normalAxis[1];
+		X_grasp(2)=normalAxis[2];
 
-		}
-		else{
-			Eigen::Vector3f RefPoint,ObjPoint;
-			Eigen::Vector3f X_grasp, zPrime,Y_grasp,Z_grasp, EulerAngles;
-			ObjPoint(0)=objFrame[3];ObjPoint(1)= objFrame[4];ObjPoint(2)= objFrame[5];
-			RefPoint(0)=0.0; RefPoint(1)=0.0; RefPoint(2)=5.0;
+		X_grasp=X_grasp/X_grasp.norm();
 
-			if (normalAxis[0]>0)
-				for (int i=0;i<3;i++)
-					normalAxis[i]=normalAxis[i]*(-1.0);
+		zPrime=(ObjPoint- RefPoint);
+		cout<<"zPrime: \n"<<zPrime<<endl;
 
-				X_grasp(0)=normalAxis[0];
-				X_grasp(1)=normalAxis[1];
-				X_grasp(2)=normalAxis[2];
+		zPrime=zPrime/(zPrime.norm());
+		cout<<"unit zPrime: \n"<<zPrime<<endl;
 
-				X_grasp=X_grasp/X_grasp.norm();
-				cout<<"X_grasp: \n"<<X_grasp<<endl;
-				cout<<"object point: \n"<<ObjPoint<<endl;
-				cout<<"Ref Point: \n"<<RefPoint<<endl;
+		Z_grasp=zPrime-X_grasp*(zPrime.dot(X_grasp));
 
-				zPrime=(ObjPoint- RefPoint);
-				cout<<"zPrime: \n"<<zPrime<<endl;
-
-				zPrime=zPrime/(zPrime.norm());
-				cout<<"unit zPrime: \n"<<zPrime<<endl;
-
-				Z_grasp=zPrime-X_grasp*(zPrime.dot(X_grasp));
-
-				Z_grasp=Z_grasp/(Z_grasp.norm());
-				cout<<"Z_grasp: \n"<<Z_grasp<<endl;
+		Z_grasp=Z_grasp/(Z_grasp.norm());
+		cout<<"Z_grasp: \n"<<Z_grasp<<endl;
 
 
-				Y_grasp=Z_grasp.cross(X_grasp);
-				cout<<"Y_grasp: \n"<<Y_grasp<<endl;
+		Y_grasp=Z_grasp.cross(X_grasp);
+		cout<<"Y_grasp: \n"<<Y_grasp<<endl;
 
 
-				RotMat(0,0)=X_grasp(0); RotMat(0,1)=Y_grasp(0); RotMat(0,2)=Z_grasp(0);
-				RotMat(1,0)=X_grasp(1); RotMat(1,1)=Y_grasp(1); RotMat(1,2)=Z_grasp(1);
-				RotMat(2,0)=X_grasp(2); RotMat(2,1)=Y_grasp(2); RotMat(2,2)=Z_grasp(2);
+		RotMat(0,0)=X_grasp(0); RotMat(0,1)=Y_grasp(0); RotMat(0,2)=Z_grasp(0);
+		RotMat(1,0)=X_grasp(1); RotMat(1,1)=Y_grasp(1); RotMat(1,2)=Z_grasp(1);
+		RotMat(2,0)=X_grasp(2); RotMat(2,1)=Y_grasp(2); RotMat(2,2)=Z_grasp(2);
 
-				cout<<"RotMat: \n"<<RotMat<<endl;
+		cout<<"RotMat: \n"<<RotMat<<endl;
 
-				EulerAngles=RotMat.eulerAngles(2,1,0);
+		EulerAngles=RotMat.eulerAngles(2,1,0);
 
-				cout<<"Euler Angles: \n"<<EulerAngles<<endl;
+		cout<<"Euler Angles: \n"<<EulerAngles<<endl;
 
-				graspPose[0]=EulerAngles(0); //Y
-				graspPose[1]=EulerAngles(1);  //P
-				graspPose[2]=EulerAngles(2);  //R
-				graspPose[3]=objFrame[3];
-				graspPose[4]=objFrame[4];
-				graspPose[5]=objFrame[5];
-				cout<<"Grasping vector: "<<endl;
-				for (int i=0;i<6;i++)
-					cout<<graspPose[i]<<" ";
-				cout<<endl;
+		graspPose[0]=EulerAngles(0); //Y
+		graspPose[1]=EulerAngles(1);  //P
+		graspPose[2]=EulerAngles(2);  //R
+		graspPose[3]=objFrame[3];
+		graspPose[4]=objFrame[4];
+		graspPose[5]=objFrame[5];
+		cout<<"Grasping vector: "<<endl;
+		for (int i=0;i<6;i++)
+			cout<<graspPose[i]<<" ";
+		cout<<endl;
 
-				pathPlanningPose[0]=graspPose[0]; //Y
-				pathPlanningPose[1]=graspPose[1];// P
-				pathPlanningPose[2]=graspPose[2];// R
+		approachingPose[0]=graspPose[0]; //Y
+		approachingPose[1]=graspPose[1];// P
+		approachingPose[2]=graspPose[2];// R
 
-				pathPlanningPose[3]=graspPose[3]-RotMat(0,2)*GraspPoseDistance;
-				pathPlanningPose[4]=graspPose[4]-RotMat(1,2)*GraspPoseDistance;
-				pathPlanningPose[5]=graspPose[5]-RotMat(2,2)*GraspPoseDistance;
+		approachingPose[3]=graspPose[3]-RotMat(0,2)*GraspPoseDistance;
+		approachingPose[4]=graspPose[4]-RotMat(1,2)*GraspPoseDistance;
+		approachingPose[5]=graspPose[5]-RotMat(2,2)*GraspPoseDistance;
+	}
 
-				cout<<"objectFinalPathPlanningPose: "<<endl;
-					for (int i=0;i<6;i++)
-						cout<<pathPlanningPose[i]<<" ";
-					cout<<endl;
-//
-//
-//
-//
-//				cout<<"****************"<<endl;
-//				cout<<"****************"<<endl;
-
-		}
-
-
+	class Frame temp_graspingFrame("graspingPose1",graspPose);
+	class Frame temp_approachingFrame("approachingPose1",approachingPose);
+	objectFrames.push_back(temp_graspingFrame);
+	objectFrames.push_back(temp_approachingFrame);
 
 }
 
@@ -330,7 +305,6 @@ void pittObjects::Cylinder::FrameSet(void){
 	 * 	We rotate y, z axis of the world to y_cylinder,z_cylinder using Rx.
 	 *
 	 * */
-//	CMAT::Vect3 X_cylinder, EulerAngles;
 
 	Eigen::Vector3f X_world, Y_world, Z_world, X_cylinder, Y_cylinder , Z_cylinder, EulerAngles,X_cross;
 	double x_cosine;	//! cosine of angle between x_world, x_cylinder, inner product
@@ -352,9 +326,9 @@ void pittObjects::Cylinder::FrameSet(void){
 	X_cross_skewSym(0,0)= 0.0;			X_cross_skewSym(0,1)= -X_cross(2);	X_cross_skewSym(0,2)= X_cross(1);
 	X_cross_skewSym(1,0)= X_cross(2);	X_cross_skewSym(1,1)= 0.0;			X_cross_skewSym(1,2)= -X_cross(0);
 	X_cross_skewSym(2,0)= -X_cross(1);	X_cross_skewSym(2,1)= X_cross(0);	X_cross_skewSym(2,2)= 0.0;
-//	I(1,1)= 1.0; I(1,2)= 0.0; I(1,3)= 0.0;
-//	I(2,1)= 0.0; I(2,2)= 1.0; I(2,3)= 0.0;
-//	I(3,1)= 0.0; I(3,2)= 0.0; I(3,3)= 1.0;
+	//	I(1,1)= 1.0; I(1,2)= 0.0; I(1,3)= 0.0;
+	//	I(2,1)= 0.0; I(2,2)= 1.0; I(2,3)= 0.0;
+	//	I(3,1)= 0.0; I(3,2)= 0.0; I(3,3)= 1.0;
 	I.setIdentity();
 
 	if (x_cosine==-1.0)
@@ -373,18 +347,10 @@ void pittObjects::Cylinder::FrameSet(void){
 
 		R=I+X_cross_skewSym+ X_cross_skewSym2;
 	}
-	cout<<"Cylinder Axis: \n"<<X_cylinder<<endl;
-	//
-//	EulerAngles=X_cylinder.Vect2RPY();
-//	EulerAngles.Transpose().PrintMtx("EulerAngles");
-//
-//	EulerAngles=X_cylinder.Vect2RPYEsa();
-//	EulerAngles.Transpose().PrintMtx("EulerAnglesEsa");
 
-	cout<<"Rotation matrix Frame: \n"<<R<<endl;
 	EulerAngles=R.eulerAngles(2,1,0);; //[yaw, pitch, roll]
-	cout<<"Euler Angles (Y P R):: \n"<<EulerAngles<<endl;;
 
+	float objFrame[6];
 	RotMat_World2Obj=R;
 	objFrame[0]=EulerAngles(0); // Y
 	objFrame[1]=EulerAngles(1);// P
@@ -393,69 +359,61 @@ void pittObjects::Cylinder::FrameSet(void){
 	objFrame[4]=trackedShape.y_est_centroid;
 	objFrame[5]=trackedShape.z_est_centroid;
 
-	cout<< "Cylinder center point: "<<objFrame[3]<<" "<<objFrame[4]<<" "<<objFrame[5]<<endl;
-}
+	class Frame temp_centerFrame("centerFrame",objFrame);
+	objectFrames.push_back(temp_centerFrame);
 
-int pittObjects::Cylinder::RobotResponsibleArm(void){
-	cout<<"Cylinder::RobotResponsibleArm"<<endl;
-		if (objFrame[4]>=0)
-			return 0;
-		else
-			return 1;
 }
 
 // =======================================
 
-void pittObjects::Cone::BoundingBox(float * boundingBox){
+void pittObjects::Cone::BoundingBox(void){
 	cout<<"Cone::BoundingBox"<<endl;
 
 }
 
-void pittObjects::Cone::BoundingBall(float* boundingBall){
+void pittObjects::Cone::BoundingBall(void){
 	cout<<"Cone::BoundingBall"<<endl;
 }
 
-void pittObjects::Cone::GraspingPosition(float * graspPose,float * pathPlanningPose, string graspingPosDef="top" ){
+void pittObjects::Cone::GraspingPosition(void){
 	cout<<"Cone::GraspingPosition"<<endl;
+	float graspPose[6]; float approachingPose[6];
+
 }
 
 void pittObjects::Cone::FrameSet(void){
 	cout<<"Cone::FrameSet"<<endl;
+
+
 }
 
-int pittObjects::Cone::RobotResponsibleArm(void){
-	cout<<"Cone::RobotResponsibleArm"<<endl;
-		if (objFrame[4]>=0)
-			return 0;
-		else
-			return 1;
-}
 // =======================================
-void pittObjects::Plane::BoundingBox(float * boundingBox){
+void pittObjects::Plane::BoundingBox(void){
 	cout<<"Plane::BoundingBox"<<endl;
 
 }
 
-void pittObjects::Plane::BoundingBall(float* boundingBall){
+void pittObjects::Plane::BoundingBall(void){
 	cout<<"Plane::BoundingBall"<<endl;
 }
 
-void pittObjects::Plane::GraspingPosition(float * graspPose,float * pathPlanningPose, string graspingPosDef="top" ){
+void pittObjects::Plane::GraspingPosition(void){
 	cout<<"Plane::GraspingPosition"<<endl;
+	float graspPose[6];float approachingPose[6];
 }
 
 void pittObjects::Plane::FrameSet(void){
 	cout<<"Plane::FrameSet"<<endl;
 	float teta;
 	float normalVec[3];
-//	float worldvector[3];
-//	float planeSize[2];
+	//	float worldvector[3];
+	//	float planeSize[2];
 	normalVec[0]=trackedShape.coefficients[0];//a
 	normalVec[1]=trackedShape.coefficients[1];//b
 	normalVec[2]=trackedShape.coefficients[2];//c
-//	worldvector[0]=0.0;
-//	worldvector[1]=0.0;
-//	worldvector[2]=1.0;
+	//	worldvector[0]=0.0;
+	//	worldvector[1]=0.0;
+	//	worldvector[2]=1.0;
 
 	float cos_teta=normalVec[0]/(sqrt(normalVec[0]*normalVec[0]+normalVec[1]*normalVec[1]+normalVec[2]*normalVec[2]));
 	if (normalVec[1]>0.0)
@@ -470,41 +428,29 @@ void pittObjects::Plane::FrameSet(void){
 	objFrame[4]=trackedShape.y_pc_centroid;	 	//y
 	objFrame[5]=trackedShape.z_pc_centroid-0.02;		//z
 
-//	planeSize[0]=0.2;//cm in Yp direction
-//	planeSize[1]=0.1;//cm in Yp direction
-	cout<<"teta: "<<teta<<endl;
-};
+	class Frame tempCenter("CenterFrame",objFrame);
+	objectFrames.push_back(tempCenter);
 
-int pittObjects::Plane::RobotResponsibleArm(void){
-	cout<<"Plane::RobotResponsibleArm"<<endl;
-		if (objFrame[4]>=0)
-			return 0;
-		else
-			return 1;
-}
+};
 
 // =======================================
 
-void pittObjects::Unknown::BoundingBox(float * boundingBox){
+void pittObjects::Unknown::BoundingBox(void){
 	cout<<"Unknown::BoundingBox"<<endl;
 
+
 }
 
-void pittObjects::Unknown::BoundingBall(float* boundingBall){
+void pittObjects::Unknown::BoundingBall(void){
 	cout<<"Unknown::BoundingBall"<<endl;
+
 }
 
-void pittObjects::Unknown::GraspingPosition(float * graspPose,float * pathPlanningPose, string graspingPosDef="top" ){
+void pittObjects::Unknown::GraspingPosition(void){
 	cout<<"Unknown::GraspingPosition"<<endl;
+
 }
 void pittObjects::Unknown::FrameSet(void){
 	cout<<"Unknown::FrameSet"<<endl;
-}
-int pittObjects::Unknown::RobotResponsibleArm(void){
-	cout<<"Unknown::RobotResponsibleArm"<<endl;
-		if (objFrame[4]>=0)
-			return 0;
-		else
-			return 1;
-}
 
+}

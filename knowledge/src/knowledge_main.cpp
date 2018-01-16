@@ -29,7 +29,7 @@ vector<shared_ptr<pittObjects::Objects>> objectsVector;
 float init_q_[2][7];
 vector<Point> pointsVector;
 
-int NumberSphere=0, NumberCylinder=0, NumberUnknown=0, NumberCone=0,NumberPlane=0;
+int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -39,6 +39,7 @@ void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg);
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg);
 void CallBackShapes(const TrackedShapes& outShapes);
 
+bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter);
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
 void readPointsVector(string pointsPath);
 
@@ -76,23 +77,11 @@ int main(int argc, char **argv)
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
 		init_q_[0][i]=msg.data[i];
-
-//	cout<<"call back: left Arm q: ";
-//	for (int i=0;i<7;i++)
-//		cout<<init_q_[0][i]<<" ";
-//	cout<<endl;
-
-
 };
 
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
 		init_q_[1][i]=msg.data[i];
-
-//	cout<<"call back: right Arm q: ";
-//	for (int i=0;i<7;i++)
-//		cout<<init_q_[1][i]<<" ";
-//	cout<<endl;
 };
 
 //********************************************************************************
@@ -103,195 +92,96 @@ void CallBackShapes(const TrackedShapes& outShapes){
 	int cylinder_counter=1, sphere_counter=1, plane_counter=1, cone_counter=1, unknown_counter=1;
 	string obj_name;
 
-//	NoCorrectRecognizedObject=0;
-	if (obj_call_back_flag==true){
-	int	EstimatedNoSphere=0, EstimatedNoCylinder=0, EstimatedNoPlane=0, EstimatedNoCone=0, EstimatedNoUnknown=0;
-
-	objectsVector.clear();
-		bool flag_isObjectInWS=true;
-
+	//	NoCorrectRecognizedObject=0;
+	if (obj_call_back_flag==true)
+	{
+		int	perceivedNoSphere=0, perceivedNoCylinder=0, perceivedNoPlane=0, perceivedNoCone=0, perceivedNoUnknown=0;
+		objectsVector.clear();
 
 		for (int i=0;i<outShapes.tracked_shapes.size();i++)
 		{
 			// if the recognized objects are in the working space add to object list otherwise do not add.
-			flag_isObjectInWS=true;
-			if(	outShapes.tracked_shapes[i].x_pc_centroid> (perception_regionOperating[0]+perception_regionOperating[3]/2.0) ||
-				outShapes.tracked_shapes[i].x_pc_centroid< (perception_regionOperating[0]-perception_regionOperating[3]/2.0) ||
+			float objectCenter[]={outShapes.tracked_shapes[i].x_pc_centroid, outShapes.tracked_shapes[i].y_pc_centroid,outShapes.tracked_shapes[i].z_pc_centroid};
+			string objectName=outShapes.tracked_shapes[i].shape_tag;
 
-				outShapes.tracked_shapes[i].y_pc_centroid> (perception_regionOperating[1]+perception_regionOperating[4]/2.0) ||
-				outShapes.tracked_shapes[i].y_pc_centroid< (perception_regionOperating[1]-perception_regionOperating[4]/2.0) ||
-
-				outShapes.tracked_shapes[i].z_pc_centroid> (perception_regionOperating[2]+perception_regionOperating[5]/2.0) ||
-				outShapes.tracked_shapes[i].z_pc_centroid< (perception_regionOperating[2]-perception_regionOperating[5]/2.0) )
+			if(IsPerceivedObjectInsideWS(objectName,objectCenter))
 			{
-				flag_isObjectInWS=false;
-			}
+				int objID=outShapes.tracked_shapes[i].object_id;
+				TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
 
-			cout<<"************** 1: "<<outShapes.tracked_shapes[i].shape_tag<<endl;
-			cout<<"************** 1: "<<outShapes.tracked_shapes[i].x_pc_centroid<< " "<< perception_regionOperating[0]-perception_regionOperating[3]/2.0<<" "<<perception_regionOperating[0]+perception_regionOperating[3]/2.0<<endl;
-			cout<<"************** 1: "<<outShapes.tracked_shapes[i].y_pc_centroid<< " "<< perception_regionOperating[1]-perception_regionOperating[4]/2.0<<" "<<perception_regionOperating[1]+perception_regionOperating[4]/2.0<<endl;
-			cout<<"************** 1: "<<outShapes.tracked_shapes[i].z_pc_centroid<< " "<< perception_regionOperating[2]-perception_regionOperating[5]/2.0<<" "<<perception_regionOperating[2]+perception_regionOperating[5]/2.0<<endl;
-			if(flag_isObjectInWS==true)
-			{
-			cout<<"************** 2: "<<outShapes.tracked_shapes[i].shape_tag<<endl;
-
-				if (outShapes.tracked_shapes[i].shape_tag=="sphere"){
-					cout<<"************** 3: "<<outShapes.tracked_shapes[i].shape_tag<<endl;
-					int objID=outShapes.tracked_shapes[i].object_id;
-					TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
-
-					obj_name="sphere"+	to_string(sphere_counter);
-					sphere_counter++;
-					objectsVector.emplace_back(make_shared <pittObjects::Sphere>(objID,obj_name,tracked_Shape));
-//					EstimatedNoSphere++;
-					//			objectsVector2.push_back(new pittObjects::Sphere(objID,tracked_Shape)); // as am example keep here this one.
-					float vecBall6[6],vecBox6[6];
-					if (!objectsVector.empty())
-					{
-						objectsVector.back()->BoundingBox(vecBox6);
-						objectsVector.back()->BoundingBall(vecBall6);
-						objectsVector.back()->FrameSet();
-					}
-
-					EstimatedNoSphere++;
-					//
-					//			boundBoxSphere(outShapes.tracked_shapes[i],obj_counter);
-					//			boundBallSphere(outShapes.tracked_shapes[i],obj_counter);
-					//			goalCenterSet(outShapes.tracked_shapes[i],obj_counter);
-					//			NoCorrectRecognizedObject++;
-				}
-				//		if (outShapes.tracked_shapes[i].shape_tag=="cylinder")
-				//			boundBoxCylinder(outShapes.tracked_shapes[i],obj_counter);
-
-				if (outShapes.tracked_shapes[i].shape_tag=="plane")
+				if (objectName=="sphere")
 				{
-					int objID=outShapes.tracked_shapes[i].object_id;
-					TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
+					perceivedNoSphere++;
+					obj_name=objectName+to_string(perceivedNoSphere);
 
-					obj_name="plane"+	to_string(plane_counter);
-					plane_counter++;
+					objectsVector.emplace_back(make_shared <pittObjects::Sphere>(objID,obj_name,tracked_Shape));
+				}
+
+				else if (objectName=="plane")
+				{
+					perceivedNoPlane++;
+					obj_name=objectName+to_string(plane_counter);
 
 					objectsVector.emplace_back(make_shared <pittObjects::Plane>(objID,obj_name,tracked_Shape));
-					EstimatedNoPlane++;
-//					EstimatedNoPlane++;
-					//			planeFrameSet(outShapes.tracked_shapes[i],100);
-					//			NoCorrectRecognizedObject++;
 				}
 
-				if (outShapes.tracked_shapes[i].shape_tag=="cylinder")
+				else if (objectName=="cylinder")
 				{
-					int objID=outShapes.tracked_shapes[i].object_id;
-					TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
-					obj_name="cylinder"+	to_string(cylinder_counter);
-					cylinder_counter++;
-
+					perceivedNoCylinder++;
+					obj_name=objectName+to_string(cylinder_counter);
 
 					objectsVector.emplace_back(make_shared <pittObjects::Cylinder>(objID,obj_name,tracked_Shape));
-					EstimatedNoCylinder++;
 				}
 
-				if (outShapes.tracked_shapes[i].shape_tag=="cone")
+				else if (objectName=="cone")
 				{
-					int objID=outShapes.tracked_shapes[i].object_id;
-					TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
-					obj_name="cone"+	to_string(cone_counter);
-					cone_counter++;
-
-
+					perceivedNoCone++;
+					obj_name=objectName+to_string(cone_counter);
 					objectsVector.emplace_back(make_shared <pittObjects::Cone>(objID,obj_name,tracked_Shape));
-					EstimatedNoCone++;
 				}
-
-				if (outShapes.tracked_shapes[i].shape_tag=="unknown")
+				else if (objectName=="unknown")
 				{
-					int objID=outShapes.tracked_shapes[i].object_id;
-					TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
-					obj_name="unknown"+	to_string(unknown_counter);
-					unknown_counter++;
-
+					perceivedNoUnknown++;
+					obj_name=objectName+to_string(unknown_counter);
 					objectsVector.emplace_back(make_shared <pittObjects::Unknown>(objID,obj_name,tracked_Shape));
-					EstimatedNoUnknown++;
 				}
-
-//				if (outShapes.tracked_shapes[i].shape_tag=="sphere")
-//					obj_counter++;
+				else
+				{ cout<<"The Object Tag is not defined in the knowledge base"<<objectName<<endl;}
 			}
 		}
-//		if (NoSphere==EstimatedNoSphere && NoPlane==EstimatedNoPlane && NoCylinder==EstimatedNoCylinder
-//				&& NoCone==EstimatedNoCone && NoUnknown==EstimatedNoUnknown)
+
+//		float vecBall6[6],vecBox6[6];
+//		if (!objectsVector.empty())
 //		{
-//			cout<<"*** Scene Recognition Is Correct ***"<<endl;
-//			cout<<"objectsVector.size: "<<objectsVector.size()<<endl;
-//			NoObstacles=objectsVector.size();
-
-			//		cout<<"Normal Vector"<<endl;
-			//		for (int i=0;i<objectsVector2.size();i++){
-			//			cout<<objectsVector2[i]<<endl;
-			//			objectsVector2[i]->Print();
-			//		}
-			//		cout<<"=================================="<<"Shared_ptr Vector"<<endl;
-			float graspPose[6],pathPlanningPose[6];
-
-			cout<<"objects vector size: "<<objectsVector.size()<<endl;
-			for (int i=0;i<objectsVector.size();i++){
-				cout<<"***********"<<objectsVector[i]<<"************"<<endl;
-				objectsVector[i]->Print();
-//				objectsVector[i]->FrameSet();
-//				objectsVector[i]->GraspingPosition(graspPose,pathPlanningPose,"top");
-
-			}
-
-			if(EstimatedNoCone==NumberCone && EstimatedNoCylinder==NumberCylinder && EstimatedNoPlane==NumberPlane &&
-					EstimatedNoSphere==NumberSphere && EstimatedNoUnknown==NumberUnknown)
-			{
-				obj_call_back_flag=false;
-			}
-
-//		}
-//		else{
-//			cout<<">>>>>> Scene Recognition Is 'NOT' Correct <<<<<<"<<endl;
-//			cout<<"Normal Vector"<<endl;
-//			//		cout<<"objectsVector2.size(): "<<objectsVector2.size()<<endl;
-//			//		for(vector<pittObjects::Objects *>::iterator it = objectsVector2.begin(); it != objectsVector2.end(); ++it) {
-//			//		  delete (*it);
-//			//		}
-//			//		objectsVector2.clear();
-//			//		cout<<"objectsVector2.size(): "<<objectsVector2.size()<<endl;
-//			//
-//			//		cout<<"=================================="<<"Shared_ptr Vector"<<endl;
-//			cout<<"objectsVector2.size(): "<<objectsVector.size()<<endl;
-//			objectsVector.clear();
-//			cout<<"objectsVector.size(): "<<objectsVector.size()<<endl;
+//			objectsVector.back()->BoundingBox(vecBox6);
+//			objectsVector.back()->BoundingBall(vecBall6);
+//			objectsVector.back()->FrameSet();
 //		}
 
-	}
-	if(		obj_call_back_flag==false)
-	{
-		cout<<"========================================================="<<endl;
-
-		for(int i=0;i<objectsVector.size();i++)
+		cout<<"objects vector size: "<<objectsVector.size()<<endl;
+		for (int i=0;i<objectsVector.size();i++)
 			objectsVector[i]->Print();
+
+		if(perceivedNoCone==NumberCone && perceivedNoCylinder==NumberCylinder && perceivedNoPlane==NumberPlane && perceivedNoSphere==NumberSphere && perceivedNoUnknown==NumberUnknown)
+			obj_call_back_flag=false;
+
 	}
 };
+
 //***************************************************************************
 //***************************************************************************
 void readPointsVector(string pointsPath){
-	cout<<200<<endl;
 	ifstream file_path_ifStr(pointsPath.c_str());
 	string line;
 	vector<string> line_list;
 
 	string delim_type=" ";
 	pointsVector.empty();
-	cout<<201<<endl;
 	if (file_path_ifStr.is_open())
 	{
 		while(getline(file_path_ifStr,line))
 		{
-
 			boost::split(line_list, line, boost::is_any_of(delim_type));
-			//			Full_State_action_list.push_back(line_list);
-			//			temp_point.name=line_list[0];
 			if(line_list[0]!="#")
 			{
 				vector<float> Pose;
@@ -309,8 +199,6 @@ void readPointsVector(string pointsPath){
 	for(int i=0;i<pointsVector.size();i++)
 		pointsVector[i].Print();
 };
-
-
 
 //***************************************************************************
 //***************************************************************************
@@ -348,7 +236,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			for(int i=0;i<objectsVector.size();i++)
 			{
 				float boundingBox[6];
-				objectsVector[i]->BoundingBox(boundingBox);
+//				objectsVector[i]->BoundingBox(boundingBox);
 
 				for(int j=0;j<6;j++)
 				{
@@ -362,12 +250,12 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			for(int i=0;i<objectsVector.size();i++)
 			{
 				float boundingBall[4];
-				objectsVector[i]->BoundingBall(boundingBall);
+//				objectsVector[i]->BoundingBall(boundingBall);
 
 				for(int j=0;j<6;j++)
 				{
 					if(j<4)
-					region.data.push_back(boundingBall[j]);
+						region.data.push_back(boundingBall[j]);
 					else
 						region.data.push_back(0.0);
 				}
@@ -440,6 +328,32 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 
 
 
-return true;
+	return true;
+};
+
+bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter){
+	bool isObjectInWS=true;
+	float perception_regionOperating[6];
+	perception_regionOperating[0]=0.45;	perception_regionOperating[1]=-0.01;	perception_regionOperating[2]=0.045;	//! center
+	perception_regionOperating[3]=0.99;	perception_regionOperating[4]=0.99;		perception_regionOperating[5]=0.60;		//! size
+
+	if( 	ObjectCenter[0]> (perception_regionOperating[0]+perception_regionOperating[3]/2.0) ||
+			ObjectCenter[0]< (perception_regionOperating[0]-perception_regionOperating[3]/2.0) ||
+
+			ObjectCenter[1]> (perception_regionOperating[1]+perception_regionOperating[4]/2.0) ||
+			ObjectCenter[1]< (perception_regionOperating[1]-perception_regionOperating[4]/2.0) ||
+
+			ObjectCenter[2]> (perception_regionOperating[2]+perception_regionOperating[5]/2.0) ||
+			ObjectCenter[2]< (perception_regionOperating[2]-perception_regionOperating[5]/2.0) )
+	{
+		isObjectInWS=false;
+		cout<<ObjectName<<" is Out of perception working space"<<endl;
+		cout<<" X: object center:"<<ObjectCenter[0]<< ", Min WS: "<< perception_regionOperating[0]-perception_regionOperating[3]/2.0<<", Max WS: "<<perception_regionOperating[0]+perception_regionOperating[3]/2.0<<endl;
+		cout<<" Y: object center:"<<ObjectCenter[1]<< ", Min WS: "<< perception_regionOperating[1]-perception_regionOperating[4]/2.0<<", Max WS: "<<perception_regionOperating[1]+perception_regionOperating[4]/2.0<<endl;
+		cout<<" Z: object center:"<<ObjectCenter[2]<< ", Min WS: "<< perception_regionOperating[2]-perception_regionOperating[5]/2.0<<", Max WS: "<<perception_regionOperating[2]+perception_regionOperating[5]/2.0<<endl;
+
+	}
+
+	return isObjectInWS;
 };
 

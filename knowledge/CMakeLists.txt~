@@ -59,5 +59,4 @@ target_link_libraries(knowledge
 Objects
 #Points
  )
-#target_link_libraries(andor_aograph pitt_msgs)
-
+target_link_libraries(Objects pitt_msgs)
