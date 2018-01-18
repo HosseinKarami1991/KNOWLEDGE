@@ -28,6 +28,10 @@
 typedef ::pitt_msgs::TrackedShape_<std::allocator<void> > TrackedShape;
 typedef ::pitt_msgs::TrackedShapes_<std::allocator<void> > TrackedShapes;
 
+#define RST  "\x1B[0m"
+#define KGRN  "\x1B[32m"
+#define FGRN(x) KGRN x RST
+
 using namespace pitt_msgs;
 using namespace std;
 //using namespace Eigen;
@@ -180,7 +184,7 @@ public:
 	}
 
 	void Print() const{
-		cout<<"***** Objects::Print() *****"<<endl;
+		cout<<FGRN("***** Objects::Print() *****")<<endl;
 		cout<<"Object Type: "<<objType<<endl;
 		cout<<"Object Name: "<<objName<<endl;
 		cout<<"Object ID: "<<objID<<endl;

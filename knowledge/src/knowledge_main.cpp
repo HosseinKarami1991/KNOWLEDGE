@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
 	const char* home=getenv("HOME");
 	string pointPath(home);
-	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TRANSPORT.txt";
+	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TableAssembly.txt";
 
 	readPointsVector(pointPath);
 
@@ -150,22 +150,35 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			}
 		}
 
-//		float vecBall6[6],vecBox6[6];
-//		if (!objectsVector.empty())
-//		{
-//			objectsVector.back()->BoundingBox(vecBox6);
-//			objectsVector.back()->BoundingBall(vecBall6);
-//			objectsVector.back()->FrameSet();
-//		}
+		//		float vecBall6[6],vecBox6[6];
+		//		if (!objectsVector.empty())
+		//		{
+		//			objectsVector.back()->BoundingBox(vecBox6);
+		//			objectsVector.back()->BoundingBall(vecBall6);
+		//			objectsVector.back()->FrameSet();
+		//		}
 
 		cout<<"objects vector size: "<<objectsVector.size()<<endl;
 		for (int i=0;i<objectsVector.size();i++)
 			objectsVector[i]->Print();
 
 		if(perceivedNoCone==NumberCone && perceivedNoCylinder==NumberCylinder && perceivedNoPlane==NumberPlane && perceivedNoSphere==NumberSphere && perceivedNoUnknown==NumberUnknown)
+		{
+			for (int i=0;i<objectsVector.size();i++)
+			{
+				objectsVector[i]->FrameSet();
+				objectsVector[i]->GraspingPosition();
+			}
+
+			cout<<BOLD("********** Object Vector *************")<<endl;
+			for (int i=0;i<objectsVector.size();i++)
+				objectsVector[i]->Print();
+
 			obj_call_back_flag=false;
+		}
 
 	}
+
 };
 
 //***************************************************************************
@@ -215,20 +228,35 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	knowledge_msgs::Region region;
 	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
-	if(type.find("Object") != std::string::npos)
+	if(type.find("plane") != std::string::npos || type.find("cylinder") != std::string::npos || type.find("sphere") != std::string::npos)
 	{
-		if(requestInfo=="graspPose")
+		if(requestInfo=="Pose")
 		{
 			for(int i=0;i<objectsVector.size();i++)
 			{
-				if(name==objectsVector[i]->objType)
+				cout<< type<<":"<<objectsVector[i]->objName<<endl;
+				if(type==objectsVector[i]->objName)
 				{
-					for(int j=0;j<6;j++)
+					for(int j=0;j<objectsVector[i]->objectFrames.size();j++)
 					{
-						res.pose.push_back(objectsVector[i]->objectGraspPose[j]);
-					}
-				}
+						cout<< name<<":"<<objectsVector[i]->objectFrames[j].name<<endl;
+						if(name==objectsVector[i]->objectFrames[j].name)
+						{
+							for(int k=0;k<6;k++)
+							{
+								res.pose.push_back(objectsVector[i]->objectFrames[j].frame[k]);
+							}
+							break;
+						}
 
+					}
+
+					break;
+				}
+				else
+				{
+					cout<<"Object with name: "<<type<<" is not found in Knowledge base"<<endl;
+				}
 			}
 		}
 		else if(requestInfo=="boundingBox")
@@ -236,7 +264,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			for(int i=0;i<objectsVector.size();i++)
 			{
 				float boundingBox[6];
-//				objectsVector[i]->BoundingBox(boundingBox);
+				//				objectsVector[i]->BoundingBox(boundingBox);
 
 				for(int j=0;j<6;j++)
 				{
@@ -250,7 +278,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			for(int i=0;i<objectsVector.size();i++)
 			{
 				float boundingBall[4];
-//				objectsVector[i]->BoundingBall(boundingBall);
+				//				objectsVector[i]->BoundingBall(boundingBall);
 
 				for(int j=0;j<6;j++)
 				{
@@ -325,8 +353,6 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	{
 		cout<<"Request type is wrong:"<<type<<endl;
 	}
-
-
 
 	return true;
 };

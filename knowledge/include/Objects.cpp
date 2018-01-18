@@ -48,6 +48,11 @@ void pittObjects::Sphere::GraspingPosition(void){
 			else
 				RM_World2Object(i-1,j-1)=0.0;
 
+	float objFrame[]={0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+	objFrame[3]=trackedShape.x_est_centroid;
+	objFrame[4]=trackedShape.y_est_centroid;
+	objFrame[5]=trackedShape.z_est_centroid;
+
 	Eigen::Vector3f Vec_ObjectFr2GraspFr, grasping_EulerAngles; // YPR
 	Vec_ObjectFr2GraspFr<< 3.14, 0.0, 3.14;
 	Eigen::Matrix3f ROtMat_ObjectFr2GraspFr, RotMat_world2Grasping;
@@ -205,6 +210,11 @@ void pittObjects::Cylinder::GraspingPosition(void){
 	 *
 	 *
 	 * */
+	float objFrame[]={0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+	objFrame[3]=trackedShape.x_est_centroid;
+	objFrame[4]=trackedShape.y_est_centroid;
+	objFrame[5]=trackedShape.z_est_centroid;
+
 	if (abs(normalAxis[2])> VERTICAL_THRESHOLD)
 	{
 		if (normalAxis[2]<0)
@@ -400,6 +410,184 @@ void pittObjects::Plane::BoundingBall(void){
 void pittObjects::Plane::GraspingPosition(void){
 	cout<<"Plane::GraspingPosition"<<endl;
 	float graspPose[6];float approachingPose[6];
+
+	cout<<"Z        r            r          "<<endl;
+	cout<<"^     p4 ^  --------- ^ p2       "<<endl;
+	cout<<"|        | |--> b <--||          "<<endl;
+	cout<<"|     p3    ---------   p1         "<<endl;
+	cout<<" ----> Y                         "<<endl;
+
+	/*!
+		1- find the two point on the left for the left arm, and the two point on the right for the right arm
+		2- Find the grasping position for the left and right arm based on the the two left/right points, and maybe also center point
+		3- find the g and r vectors of the grasping pose base on upper figure
+		4- find the b vector using cross product
+		5- find the yaw, pitch, roll of the grasping frame using rotation matrix
+		6- add the found frames to the frame vector
+	 */
+	vector<vector<float>> verticesOld, vertices;
+	vector<float> vertex, center, planeCoef;
+	// [0 1 2 3]: a, b,c,d
+	vertex.push_back(trackedShape.coefficients[4]);
+	vertex.push_back(trackedShape.coefficients[5]);
+	vertex.push_back(trackedShape.coefficients[6]);
+	verticesOld.push_back(vertex);
+	vertex.clear();
+
+	vertex.push_back(trackedShape.coefficients[7]);
+	vertex.push_back(trackedShape.coefficients[8]);
+	vertex.push_back(trackedShape.coefficients[9]);
+	verticesOld.push_back(vertex);
+	vertex.clear();
+
+	vertex.push_back(trackedShape.coefficients[10]);
+	vertex.push_back(trackedShape.coefficients[11]);
+	vertex.push_back(trackedShape.coefficients[12]);
+	verticesOld.push_back(vertex);
+	vertex.clear();
+
+	vertex.push_back(trackedShape.coefficients[13]);
+	vertex.push_back(trackedShape.coefficients[14]);
+	vertex.push_back(trackedShape.coefficients[15]);
+	verticesOld.push_back(vertex);
+	vertex.clear();
+
+	center.push_back(trackedShape.x_pc_centroid);//x
+	center.push_back(trackedShape.y_pc_centroid);//y
+	center.push_back(trackedShape.z_pc_centroid);//z
+	for(int i=0;i<4;i++)
+		planeCoef.push_back(trackedShape.coefficients[i]); //a,b,c,d
+
+	// normal of the plate is toward -X:
+	if (planeCoef[0]>0)
+		for(int i=0;i<4;i++)
+			planeCoef[i]=-1.0*planeCoef[i];
+
+	// make vertices ordered based on figure above:
+	vertex.resize(3,0.0);
+	vertices.resize(4,vertex);
+	for(int i=0;i<verticesOld.size();i++)
+	{
+		if(verticesOld[i][1]> center[1] && verticesOld[i][2]< center[2])
+		{
+			cout<<"1"<<endl;
+			vertices[0]=verticesOld[i];
+		}
+		else if(verticesOld[i][1]> center[1] && verticesOld[i][2]> center[2])
+		{
+			cout<<"2"<<endl;
+			vertices[1]=verticesOld[i];
+		}
+		else if(verticesOld[i][1]< center[1] && verticesOld[i][2]< center[2])
+		{
+			cout<<"3"<<endl;
+			vertices[2]=verticesOld[i];
+		}
+		else if(verticesOld[i][1]< center[1] && verticesOld[i][2]> center[2])
+		{
+			cout<<"4"<<endl;
+			vertices[3]=verticesOld[i];
+		}
+		else
+			cout<<"Error in vertices and center of plane"<<endl;
+	}
+
+	cout<<"center: "<<center[0]<<" "<<center[1]<<" "<<center[2]<<endl;
+	cout<<"vertices old:"<<endl;
+	for(int i=0;i<4;i++)
+	{	for (int j=0;j<3;j++)
+		cout<<verticesOld[i][j]<<" ";
+	cout<<endl;
+	}
+	cout<<"vertices:"<<endl;
+	for(int i=0;i<4;i++)
+	{	for (int j=0;j<3;j++)
+			cout<<vertices[i][j]<<" ";
+		cout<<endl;
+	}
+
+	vector<float> gp1,gp2;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+
+	for (int i=0;i<3;i++)
+		gp1.push_back( (vertices[0][i]+vertices[1][i])/2.0 );
+	for (int i=0;i<3;i++)
+		gp2.push_back( (vertices[2][i]+vertices[3][i])/2.0 );
+
+
+	Eigen::Vector3f X1_grasp, Y1_grasp,Z1_grasp, EulerAngles1, X2_grasp, Y2_grasp,Z2_grasp, EulerAngles2, XCenter_grasp, YCenter_grasp,ZCenter_grasp, EulerAnglesCenter;
+
+	for(int i=0;i<3;i++)
+	{
+		X1_grasp(i)=((vertices[1][i]-vertices[0][i])+(vertices[3][i]-vertices[2][i]))/2.0;
+		X2_grasp(i)=X1_grasp(i);
+	}
+	X2_grasp=X2_grasp/X2_grasp.norm();
+	X1_grasp=X1_grasp/X1_grasp.norm();
+
+	for(int i=0;i<3;i++)
+	{
+		Y1_grasp(i)=planeCoef[i];
+		Y2_grasp(i)=-planeCoef[i];
+	}
+
+	Y1_grasp=Y1_grasp/Y1_grasp.norm();
+	Y2_grasp=Y2_grasp/Y2_grasp.norm();
+
+	Z1_grasp=X1_grasp.cross(Y1_grasp);
+	Z2_grasp=X2_grasp.cross(Y2_grasp);
+
+	XCenter_grasp=X1_grasp; // check later
+	YCenter_grasp=Y1_grasp;
+	ZCenter_grasp=Z1_grasp;
+
+	Eigen::Matrix3f RotMat1, RotMat2, RotMatCenter;
+
+	RotMat1(0,0)=X1_grasp(0); RotMat1(0,1)=Y1_grasp(0); RotMat1(0,2)=Z1_grasp(0);
+	RotMat1(1,0)=X1_grasp(1); RotMat1(1,1)=Y1_grasp(1); RotMat1(1,2)=Z1_grasp(1);
+	RotMat1(2,0)=X1_grasp(2); RotMat1(2,1)=Y1_grasp(2); RotMat1(2,2)=Z1_grasp(2);
+
+	RotMat2(0,0)=X2_grasp(0); RotMat2(0,1)=Y2_grasp(0); RotMat2(0,2)=Z2_grasp(0);
+	RotMat2(1,0)=X2_grasp(1); RotMat2(1,1)=Y2_grasp(1); RotMat2(1,2)=Z2_grasp(1);
+	RotMat2(2,0)=X2_grasp(2); RotMat2(2,1)=Y2_grasp(2); RotMat2(2,2)=Z2_grasp(2);
+
+	RotMatCenter=RotMat1;
+
+	EulerAngles1		=RotMat1.eulerAngles(2,1,0);
+	EulerAngles2		=RotMat2.eulerAngles(2,1,0);
+	EulerAnglesCenter	=RotMatCenter.eulerAngles(2,1,0);
+
+	float graspPose1[6], graspPose2[6], graspPoseCenter[6];
+	graspPose1[0]=EulerAngles1(0); //Y
+	graspPose1[1]=EulerAngles1(1);  //P
+	graspPose1[2]=EulerAngles1(2);  //R
+	graspPose1[3]=gp1[0];
+	graspPose1[4]=gp1[1];
+	graspPose1[5]=gp1[2];
+
+	graspPose2[0]=EulerAngles1(0); //Y
+	graspPose2[1]=EulerAngles2(1);  //P
+	graspPose2[2]=EulerAngles2(2);  //R
+	graspPose2[3]=gp2[0];
+	graspPose2[4]=gp2[1];
+	graspPose2[5]=gp2[2];
+
+	graspPoseCenter[0]=EulerAnglesCenter(0); //Y
+	graspPoseCenter[1]=EulerAnglesCenter(1);  //P
+	graspPoseCenter[2]=EulerAnglesCenter(2);  //R
+	graspPoseCenter[3]=center[0];
+	graspPoseCenter[4]=center[1];
+	graspPoseCenter[5]=center[2];
+
+
+	class Frame tempCenter("centerFrame",graspPoseCenter);
+	objectFrames.push_back(tempCenter);
+
+	class Frame tempgp1("graspingPose1",graspPose1);
+	objectFrames.push_back(tempgp1);
+
+	class Frame tempgp2("graspingPose2",graspPose2);
+	objectFrames.push_back(tempgp2);
+
 }
 
 void pittObjects::Plane::FrameSet(void){
@@ -428,8 +616,8 @@ void pittObjects::Plane::FrameSet(void){
 	objFrame[4]=trackedShape.y_pc_centroid;	 	//y
 	objFrame[5]=trackedShape.z_pc_centroid-0.02;		//z
 
-	class Frame tempCenter("CenterFrame",objFrame);
-	objectFrames.push_back(tempCenter);
+//	class Frame tempCenter("CenterFrame",objFrame);
+//	objectFrames.push_back(tempCenter);
 
 };
 
