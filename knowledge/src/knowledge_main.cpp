@@ -29,7 +29,7 @@ vector<shared_ptr<pittObjects::Objects>> objectsVector;
 float init_q_[2][7];
 vector<Point> pointsVector;
 
-int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=1, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=0;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];

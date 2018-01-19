@@ -76,13 +76,13 @@ void pittObjects::Sphere::GraspingPosition(void){
 	objectFrames.push_back(tempGrapsingFrame);
 
 
-	approachingPose[0]=graspPose[0]; //Y
-	approachingPose[1]=graspPose[1];// P
-	approachingPose[2]=graspPose[2];// R
+	approachingPose[0]=graspingPose[0]; //Y
+	approachingPose[1]=graspingPose[1];// P
+	approachingPose[2]=graspingPose[2];// R
 
-	approachingPose[3]=graspPose[3]-RotMat_world2Grasping(0,2)*GraspPoseDistance;
-	approachingPose[4]=graspPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
-	approachingPose[5]=graspPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
+	approachingPose[3]=graspingPose[3]-RotMat_world2Grasping(0,2)*GraspPoseDistance;
+	approachingPose[4]=graspingPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
+	approachingPose[5]=graspingPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
 
 	class Frame tempApproachingFrame("approachingPose1",approachingPose);
 	objectFrames.push_back(tempApproachingFrame);
@@ -409,7 +409,6 @@ void pittObjects::Plane::BoundingBall(void){
 
 void pittObjects::Plane::GraspingPosition(void){
 	cout<<"Plane::GraspingPosition"<<endl;
-	float graspPose[6];float approachingPose[6];
 
 	cout<<"Z        r            r          "<<endl;
 	cout<<"^     p4 ^  --------- ^ p2       "<<endl;
@@ -425,6 +424,10 @@ void pittObjects::Plane::GraspingPosition(void){
 		5- find the yaw, pitch, roll of the grasping frame using rotation matrix
 		6- add the found frames to the frame vector
 	 */
+
+	float GRASPING_DIS=0.05;// 5 cm from the plate border the grasping pose and the approaching pose
+	float PLANE_THICKNESS=0.06;
+
 	vector<vector<float>> verticesOld, vertices;
 	vector<float> vertex, center, planeCoef;
 	// [0 1 2 3]: a, b,c,d
@@ -506,12 +509,13 @@ void pittObjects::Plane::GraspingPosition(void){
 		cout<<endl;
 	}
 
-	vector<float> gp1,gp2;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+	Eigen::Vector3f gp1,gp2;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+	Eigen::Vector3f graspingPose1, graspingPose2, approachingPose1, approachingPose2;//positions: graspingPose =gp+ GRASPING_DIS* ZDir, approachingPose =gp - GRASPING_DIS* ZDir
 
 	for (int i=0;i<3;i++)
-		gp1.push_back( (vertices[0][i]+vertices[1][i])/2.0 );
+		gp1(i)= (vertices[0][i]+vertices[1][i])/2.0 ;
 	for (int i=0;i<3;i++)
-		gp2.push_back( (vertices[2][i]+vertices[3][i])/2.0 );
+		gp2(i)=(vertices[2][i]+vertices[3][i])/2.0 ;
 
 
 	Eigen::Vector3f X1_grasp, Y1_grasp,Z1_grasp, EulerAngles1, X2_grasp, Y2_grasp,Z2_grasp, EulerAngles2, XCenter_grasp, YCenter_grasp,ZCenter_grasp, EulerAnglesCenter;
@@ -540,6 +544,21 @@ void pittObjects::Plane::GraspingPosition(void){
 	YCenter_grasp=Y1_grasp;
 	ZCenter_grasp=Z1_grasp;
 
+	graspingPose1 =gp1+ GRASPING_DIS* Z1_grasp;
+	approachingPose1 =gp1- GRASPING_DIS* Z1_grasp;
+
+	graspingPose2 =gp2+ GRASPING_DIS* Z2_grasp;
+	approachingPose2 =gp2- GRASPING_DIS* Z2_grasp;
+
+	// adjust the points based on the plane thickness
+	// Y1_grasp: equal to the normal of the plane in '-X' direction
+	graspingPose1 		=graspingPose1 - PLANE_THICKNESS* Y1_grasp;
+	approachingPose1	=approachingPose1  - PLANE_THICKNESS* Y1_grasp;
+
+	graspingPose2 =graspingPose2 - PLANE_THICKNESS* Y1_grasp;
+	approachingPose2 =approachingPose2- PLANE_THICKNESS* Y1_grasp;
+
+
 	Eigen::Matrix3f RotMat1, RotMat2, RotMatCenter;
 
 	RotMat1(0,0)=X1_grasp(0); RotMat1(0,1)=Y1_grasp(0); RotMat1(0,2)=Z1_grasp(0);
@@ -556,20 +575,35 @@ void pittObjects::Plane::GraspingPosition(void){
 	EulerAngles2		=RotMat2.eulerAngles(2,1,0);
 	EulerAnglesCenter	=RotMatCenter.eulerAngles(2,1,0);
 
-	float graspPose1[6], graspPose2[6], graspPoseCenter[6];
+	float graspPose1[6], graspPose2[6], graspPoseCenter[6], approachPose1[6], approachPose2[6];
+
 	graspPose1[0]=EulerAngles1(0); //Y
 	graspPose1[1]=EulerAngles1(1);  //P
 	graspPose1[2]=EulerAngles1(2);  //R
-	graspPose1[3]=gp1[0];
-	graspPose1[4]=gp1[1];
-	graspPose1[5]=gp1[2];
+	graspPose1[3]=graspingPose1(0);
+	graspPose1[4]=graspingPose1(1);
+	graspPose1[5]=graspingPose1(2);
 
 	graspPose2[0]=EulerAngles1(0); //Y
 	graspPose2[1]=EulerAngles2(1);  //P
 	graspPose2[2]=EulerAngles2(2);  //R
-	graspPose2[3]=gp2[0];
-	graspPose2[4]=gp2[1];
-	graspPose2[5]=gp2[2];
+	graspPose2[3]=graspingPose2(0);
+	graspPose2[4]=graspingPose2(1);
+	graspPose2[5]=graspingPose2(2);
+
+	approachPose1[0]=EulerAngles1(0); //Y
+	approachPose1[1]=EulerAngles1(1);  //P
+	approachPose1[2]=EulerAngles1(2);  //R
+	approachPose1[3]=approachingPose1(0);
+	approachPose1[4]=approachingPose1(1);
+	approachPose1[5]=approachingPose1(2);
+
+	approachPose2[0]=EulerAngles2(0); //Y
+	approachPose2[1]=EulerAngles2(1);  //P
+	approachPose2[2]=EulerAngles2(2);  //R
+	approachPose2[3]=approachingPose2(0);
+	approachPose2[4]=approachingPose2(1);
+	approachPose2[5]=approachingPose2(2);
 
 	graspPoseCenter[0]=EulerAnglesCenter(0); //Y
 	graspPoseCenter[1]=EulerAnglesCenter(1);  //P
@@ -587,6 +621,12 @@ void pittObjects::Plane::GraspingPosition(void){
 
 	class Frame tempgp2("graspingPose2",graspPose2);
 	objectFrames.push_back(tempgp2);
+
+	class Frame tempap1("approachingPose1",approachPose1);
+	objectFrames.push_back(tempap1);
+
+	class Frame tempap2("approachingPose2",approachPose2);
+	objectFrames.push_back(tempap2);
 
 }
 
