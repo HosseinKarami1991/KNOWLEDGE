@@ -196,7 +196,7 @@ void pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"RADIUS:"<<radius<<" HEIGHT:"<<height<<endl;
 	cout<<"-------------------"<<endl;
 	float VERTICAL_THRESHOLD=0.99;
-	float VERTICAL_GRASPING_POINT_THRESHOLD=0.05;// 5 cm from top we grasp the object
+	float VERTICAL_GRASPING_POINT_THRESHOLD=0.08;// 5 cm from top we grasp the object
 	/*!
 	 * o if the cylinder is vertical:
 	 * 	- vertical cylinder means normalAxis[2]>0.99
@@ -217,6 +217,7 @@ void pittObjects::Cylinder::GraspingPosition(void){
 
 	if (abs(normalAxis[2])> VERTICAL_THRESHOLD)
 	{
+
 		if (normalAxis[2]<0)
 			for (int i=0;i<3;i++)
 				normalAxis[i]=normalAxis[i]*(-1.0);
@@ -240,6 +241,7 @@ void pittObjects::Cylinder::GraspingPosition(void){
 
 	else
 	{
+		float VERTICAL_GRASPING_POINT_THRESHOLD=0.05;// 5 cm from top we grasp the object
 		Eigen::Vector3f RefPoint,ObjPoint;
 		Eigen::Vector3f X_grasp, zPrime,Y_grasp,Z_grasp, EulerAngles;
 		ObjPoint(0)=objFrame[3];ObjPoint(1)= objFrame[4];ObjPoint(2)= objFrame[5];
@@ -284,9 +286,9 @@ void pittObjects::Cylinder::GraspingPosition(void){
 		graspPose[0]=EulerAngles(0); //Y
 		graspPose[1]=EulerAngles(1);  //P
 		graspPose[2]=EulerAngles(2);  //R
-		graspPose[3]=objFrame[3];
-		graspPose[4]=objFrame[4];
-		graspPose[5]=objFrame[5];
+		graspPose[3]=objFrame[3]+RotMat(0,2)*VERTICAL_GRASPING_POINT_THRESHOLD;
+		graspPose[4]=objFrame[4]+RotMat(1,2)*VERTICAL_GRASPING_POINT_THRESHOLD;
+		graspPose[5]=objFrame[5]+RotMat(2,2)*VERTICAL_GRASPING_POINT_THRESHOLD;
 		cout<<"Grasping vector: "<<endl;
 		for (int i=0;i<6;i++)
 			cout<<graspPose[i]<<" ";
@@ -296,9 +298,9 @@ void pittObjects::Cylinder::GraspingPosition(void){
 		approachingPose[1]=graspPose[1];// P
 		approachingPose[2]=graspPose[2];// R
 
-		approachingPose[3]=graspPose[3]-RotMat(0,2)*GraspPoseDistance;
-		approachingPose[4]=graspPose[4]-RotMat(1,2)*GraspPoseDistance;
-		approachingPose[5]=graspPose[5]-RotMat(2,2)*GraspPoseDistance;
+		approachingPose[3]=objFrame[3]-RotMat(0,2)*GraspPoseDistance; //Z direction 0
+		approachingPose[4]=objFrame[4]-RotMat(1,2)*GraspPoseDistance;// Z direction 1
+		approachingPose[5]=objFrame[5]-RotMat(2,2)*GraspPoseDistance;// Z direction 2
 	}
 
 	class Frame temp_graspingFrame("graspingPose1",graspPose);
@@ -425,8 +427,8 @@ void pittObjects::Plane::GraspingPosition(void){
 		6- add the found frames to the frame vector
 	 */
 
-	float GRASPING_DIS=0.05;// 5 cm from the plate border the grasping pose and the approaching pose
-	float PLANE_THICKNESS=0.06;
+	float GRASPING_DIS=0.08;// 5 cm from the plate border the grasping pose and the approaching pose
+	float PLANE_THICKNESS=0.04;
 
 	vector<vector<float>> verticesOld, vertices;
 	vector<float> vertex, center, planeCoef;
@@ -465,6 +467,12 @@ void pittObjects::Plane::GraspingPosition(void){
 	if (planeCoef[0]>0)
 		for(int i=0;i<4;i++)
 			planeCoef[i]=-1.0*planeCoef[i];
+
+	// if the plate is horizontal, make the normal toward -Z
+	if(planeCoef[2]>0.9)
+		for(int i=0;i<4;i++)
+			planeCoef[i]=-1.0*planeCoef[i];
+
 
 	// make vertices ordered based on figure above:
 	vertex.resize(3,0.0);
@@ -627,6 +635,34 @@ void pittObjects::Plane::GraspingPosition(void){
 
 	class Frame tempap2("approachingPose2",approachPose2);
 	objectFrames.push_back(tempap2);
+
+	// screw poses:
+	float SCREW_DIS=0.05, SCREW_LENGTH=0.035; // the screw distance from the borders of the plate are 5 cm
+
+	// we use the frames on the center frame (= gp1 frame) in order to find the vectors to move from vertices of the plate to the screw poses
+	Eigen::Vector3f screw1, screw2, screw3, screw4 ;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+
+	screw1={vertices[0][0], vertices[0][1],vertices[0][2]};
+	screw2={vertices[1][0], vertices[1][1],vertices[1][2]};
+	screw3={vertices[2][0], vertices[2][1],vertices[2][2]};
+	screw4={vertices[3][0], vertices[3][1],vertices[3][2]};
+
+	screw1=screw1+SCREW_DIS* X1_grasp; screw1=screw1+SCREW_DIS* Z1_grasp; screw1=screw1-SCREW_LENGTH* Z1_grasp;
+	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-SCREW_LENGTH* Z1_grasp;
+	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-SCREW_LENGTH* Z1_grasp;
+	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-SCREW_LENGTH* Z1_grasp;
+
+	Eigen::Vector3f screw1Euler, screw2Euler, screw3Euler, screw4Euler; // Pi,0,PI
+
+
+
+
+
+
+
+
+
+
 
 }
 

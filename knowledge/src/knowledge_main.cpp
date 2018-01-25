@@ -26,10 +26,10 @@ using namespace pitt_msgs;
 
 // global variables:
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
-float init_q_[2][7];
+float EE_value[2][7];
 vector<Point> pointsVector;
 
-int NumberSphere=1, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=0;
+int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -76,12 +76,12 @@ int main(int argc, char **argv)
 
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
-		init_q_[0][i]=msg.data[i];
+		EE_value[0][i]=msg.data[i];
 };
 
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
-		init_q_[1][i]=msg.data[i];
+		EE_value[1][i]=msg.data[i];
 };
 
 //********************************************************************************
@@ -325,11 +325,11 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 			region.data.clear();
 			if(agents_vector[i]=="LeftArm")
 				for(int j=0;j<7;j++)
-					region.data.push_back(init_q_[0][j]);
+					region.data.push_back(EE_value[0][j]);
 
 			else if(agents_vector[i]=="RightArm")
 				for(int j=0;j<7;j++)
-					region.data.push_back(init_q_[1][j]);
+					region.data.push_back(EE_value[1][j]);
 
 			else
 				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;

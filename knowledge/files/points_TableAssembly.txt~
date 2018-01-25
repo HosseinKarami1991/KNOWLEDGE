@@ -1,10 +1,15 @@
 # 0: right
-Point0 0 -1.53307 1.50453 0.55 0.0 0.1
+Point0 3.1 0.0 -1.57 0.55 0.0 0.1
 # 1: right
 Point1 3.14 0 3.14 0.75 0.0 0.2
 # 2: right
 Point2 3.14 0 3.14 0.8 0.0 0.2
+# 0: right
+Point3 3.1 0.0 -1.57 0.55 0.0 -0.1
 # 3: restingPiont right
+# 0: right
+Point4 0 -1.53 1.50 0.55 0.0 0.2
 Point_RestingRight -0.6 -1.156 0.900 1.979 -0.407 0.911 2.135
 # 4: restingPiont left
 Point_RestingLeft 0.6 -1.107 -1.067 1.913 0.472 1.018 -2.241
+
