@@ -161,6 +161,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 		cout<<"objects vector size: "<<objectsVector.size()<<endl;
 		for (int i=0;i<objectsVector.size();i++)
 			objectsVector[i]->Print();
+		cout<<"+++++++++++++++++++++++++++++++"<<endl;
 
 		if(perceivedNoCone==NumberCone && perceivedNoCylinder==NumberCylinder && perceivedNoPlane==NumberPlane && perceivedNoSphere==NumberSphere && perceivedNoUnknown==NumberUnknown)
 		{

@@ -463,15 +463,24 @@ void pittObjects::Plane::GraspingPosition(void){
 	for(int i=0;i<4;i++)
 		planeCoef.push_back(trackedShape.coefficients[i]); //a,b,c,d
 
+	cout<<"plane coef: "<<planeCoef[0]<<" "<<planeCoef[1]<<" "<<planeCoef[2]<<" "<<planeCoef[3]<<" "<<endl;
 	// normal of the plate is toward -X:
 	if (planeCoef[0]>0)
 		for(int i=0;i<4;i++)
 			planeCoef[i]=-1.0*planeCoef[i];
+	int index1=1, index2=2, index3=0;
 
+	cout<<"plane coef: "<<planeCoef[0]<<" "<<planeCoef[1]<<" "<<planeCoef[2]<<" "<<planeCoef[3]<<" "<<endl;
 	// if the plate is horizontal, make the normal toward -Z
 	if(planeCoef[2]>0.9)
+	{
 		for(int i=0;i<4;i++)
 			planeCoef[i]=-1.0*planeCoef[i];
+		index1=0, index2=1, index3=2;
+	}
+	else if(planeCoef[2]<-0.9)
+	{index1=0, index2=1, index3=2;}
+	cout<<"plane coef: "<<planeCoef[0]<<" "<<planeCoef[1]<<" "<<planeCoef[2]<<" "<<planeCoef[3]<<" "<<endl;
 
 
 	// make vertices ordered based on figure above:
@@ -479,22 +488,22 @@ void pittObjects::Plane::GraspingPosition(void){
 	vertices.resize(4,vertex);
 	for(int i=0;i<verticesOld.size();i++)
 	{
-		if(verticesOld[i][1]> center[1] && verticesOld[i][2]< center[2])
+		if(verticesOld[i][index1]> center[index1] && verticesOld[i][index2]< center[index2])
 		{
 			cout<<"1"<<endl;
 			vertices[0]=verticesOld[i];
 		}
-		else if(verticesOld[i][1]> center[1] && verticesOld[i][2]> center[2])
+		else if(verticesOld[i][index1]> center[index1] && verticesOld[i][index2]> center[index2])
 		{
 			cout<<"2"<<endl;
 			vertices[1]=verticesOld[i];
 		}
-		else if(verticesOld[i][1]< center[1] && verticesOld[i][2]< center[2])
+		else if(verticesOld[i][index1]< center[index1] && verticesOld[i][index2]< center[index2])
 		{
 			cout<<"3"<<endl;
 			vertices[2]=verticesOld[i];
 		}
-		else if(verticesOld[i][1]< center[1] && verticesOld[i][2]> center[2])
+		else if(verticesOld[i][index1]< center[index1] && verticesOld[i][index2]> center[index2])
 		{
 			cout<<"4"<<endl;
 			vertices[3]=verticesOld[i];
@@ -647,15 +656,21 @@ void pittObjects::Plane::GraspingPosition(void){
 	screw3={vertices[2][0], vertices[2][1],vertices[2][2]};
 	screw4={vertices[3][0], vertices[3][1],vertices[3][2]};
 
-	screw1=screw1+SCREW_DIS* X1_grasp; screw1=screw1+SCREW_DIS* Z1_grasp; screw1=screw1-SCREW_LENGTH* Z1_grasp;
-	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-SCREW_LENGTH* Z1_grasp;
-	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-SCREW_LENGTH* Z1_grasp;
-	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-SCREW_LENGTH* Z1_grasp;
+	screw1=screw1+SCREW_DIS* X1_grasp; screw1=screw1+SCREW_DIS* Z1_grasp; screw1=screw1-SCREW_LENGTH* Y1_grasp;
+	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-SCREW_LENGTH* Y1_grasp;
+	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-SCREW_LENGTH* Y1_grasp;
+	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-SCREW_LENGTH* Y1_grasp;
 
 	Eigen::Vector3f screw1Euler, screw2Euler, screw3Euler, screw4Euler; // Pi,0,PI
 
+	cout<<"X: "<<X1_grasp(0)<<" "<<X1_grasp(1)<<" "<<X1_grasp(2)<<endl;
+	cout<<"Y: "<<Y1_grasp(0)<<" "<<Y1_grasp(1)<<" "<<Y1_grasp(2)<<endl;
+	cout<<"Z: "<<Z1_grasp(0)<<" "<<Z1_grasp(1)<<" "<<Z1_grasp(2)<<endl;
 
-
+	cout<<"screw 1: "<<screw1(0)<<" "<<screw1(1)<<" "<<screw1(2)<<endl;
+	cout<<"screw 2: "<<screw2(0)<<" "<<screw2(1)<<" "<<screw2(2)<<endl;
+	cout<<"screw 3: "<<screw3(0)<<" "<<screw3(1)<<" "<<screw3(2)<<endl;
+	cout<<"screw 4: "<<screw4(0)<<" "<<screw4(1)<<" "<<screw4(2)<<endl;
 
 
 
