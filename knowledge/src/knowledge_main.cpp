@@ -4,6 +4,8 @@
 #include "pitt_msgs/TrackedShapes.h"
 #include "pitt_msgs/ClustersOutput.h"
 #include "Objects.hpp"
+#include "Points.hpp"
+#include "World.hpp"
 #include <geometry_msgs/Vector3.h>
 #include <knowledge_msgs/knowledgeSRV.h>
 #include <boost/algorithm/string.hpp>
@@ -26,8 +28,9 @@ using namespace pitt_msgs;
 
 // global variables:
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
-float EE_value[2][7];
-vector<Point> pointsVector;
+
+vector<World> worldVec;
+int left_q_index,right_q_index;
 
 int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
@@ -41,7 +44,6 @@ void CallBackShapes(const TrackedShapes& outShapes);
 
 bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter);
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
-void readPointsVector(string pointsPath);
 
 int main(int argc, char **argv)
 {
@@ -61,8 +63,12 @@ int main(int argc, char **argv)
 	string pointPath(home);
 	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TableAssembly.txt";
 
-	readPointsVector(pointPath);
-
+	readPointsVector(pointPath, worldVec);
+	worldVec.resize(worldVec.size()+2);
+	left_q_index=worldVec.size();
+	right_q_index=worldVec.size()+1;
+	worldVec[left_q_index].name.push_back("LeftArm_q");
+	worldVec[right_q_index].name.push_back("RightArm_q");
 
 	ros::ServiceServer service = nh.advertiseService("knowledgeService",KnowledgeQuery);
 
@@ -75,13 +81,18 @@ int main(int argc, char **argv)
 
 
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
+	vector<float> leftQ;
 	for (int i=0;i<7;i++)
-		EE_value[0][i]=msg.data[i];
+		leftQ.push_back(msg.data[i]);
+	worldVec[left_q_index].value=leftQ;
 };
 
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
+	vector<float> rightQ;
 	for (int i=0;i<7;i++)
-		EE_value[1][i]=msg.data[i];
+		rightQ.push_back(msg.data[i]);
+
+	worldVec[right_q_index].value=rightQ;
 };
 
 //********************************************************************************
@@ -150,13 +161,6 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			}
 		}
 
-		//		float vecBall6[6],vecBox6[6];
-		//		if (!objectsVector.empty())
-		//		{
-		//			objectsVector.back()->BoundingBox(vecBox6);
-		//			objectsVector.back()->BoundingBall(vecBall6);
-		//			objectsVector.back()->FrameSet();
-		//		}
 
 		cout<<"objects vector size: "<<objectsVector.size()<<endl;
 		for (int i=0;i<objectsVector.size();i++)
@@ -173,46 +177,26 @@ void CallBackShapes(const TrackedShapes& outShapes){
 
 			cout<<BOLD("********** Object Vector *************")<<endl;
 			for (int i=0;i<objectsVector.size();i++)
+			{
 				objectsVector[i]->Print();
-
+				for(int j=0;j<objectsVector[i]->objectFrames.size();j++)
+				{
+					World instance;
+					instance.name.push_back(objectsVector[i]->objType);
+					instance.name.push_back(objectsVector[i]->objName);
+					instance.name.push_back(objectsVector[i]->objectFrames[j].name);
+					for(int m=0;m<6;m++)
+					instance.value.push_back(objectsVector[i]->objectFrames[j].frame[m]);
+					worldVec.push_back(instance);
+				}
+			}
 			obj_call_back_flag=false;
 		}
-
 	}
 
 };
 
-//***************************************************************************
-//***************************************************************************
-void readPointsVector(string pointsPath){
-	ifstream file_path_ifStr(pointsPath.c_str());
-	string line;
-	vector<string> line_list;
 
-	string delim_type=" ";
-	pointsVector.empty();
-	if (file_path_ifStr.is_open())
-	{
-		while(getline(file_path_ifStr,line))
-		{
-			boost::split(line_list, line, boost::is_any_of(delim_type));
-			if(line_list[0]!="#")
-			{
-				vector<float> Pose;
-				for(int i=1;i<line_list.size();i++)
-				{
-					Pose.push_back( stof(line_list[i]) );
-				}
-
-				Point temp_point(line_list[0],Pose);
-				pointsVector.push_back(temp_point);
-			}
-		}
-	}
-
-	for(int i=0;i<pointsVector.size();i++)
-		pointsVector[i].Print();
-};
 
 //***************************************************************************
 //***************************************************************************
@@ -224,136 +208,175 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	string name=req.Name;
 	string requestInfo=req.requestInfo;
 
-	cout<<"name: "<<name<<", type: "<<type<<", requestInfo: "<<requestInfo<<endl;
+	cout<<"MSG:: type: "<<type<<", requestInfo: "<<requestInfo<<endl;
+	vector<string> typeVec,requestInfoVec;
+	boost::split(typeVec, type, boost::is_any_of("-")); // Exmpl: Point-Point1, Point1, Cylinder-Cylinder1, Cylinder, Cylinder-Cylinder1-graspingPose1, Cylinder-Cylinder1-centerFrame
+	boost::split(requestInfoVec, requestInfo, boost::is_any_of("-"));// Pose, Pose-Name, Center, Center-Name, boundingBox, boundingBall
+	bool ret_name=false; // trturn name (if false: value)
 
-	knowledge_msgs::Region region;
-	geometry_msgs::Vector3 PoseLinear,PoseAngular;
+	if(requestInfo.find("Name") != std::string::npos)
+		ret_name=true;
 
-	if(type.find("plane") != std::string::npos || type.find("cylinder") != std::string::npos || type.find("sphere") != std::string::npos)
+	for(int i=0;i<worldVec.size();i++)
 	{
-		if(requestInfo=="Pose")
+		for(int j=0; j<worldVec[i].name.size();j++)
 		{
-			for(int i=0;i<objectsVector.size();i++)
+			int Occurence=0;
+			for(int k=0;k<typeVec.size();k++)
+				if(worldVec[i].name[j]==typeVec[k])
+					Occurence++;
+
+			if(Occurence==typeVec.size() && worldVec[i].name.back().find(requestInfoVec[0]) != std::string::npos)
 			{
-				cout<< type<<":"<<objectsVector[i]->objName<<endl;
-				if(type==objectsVector[i]->objName)
+				if(ret_name==true)
 				{
-					for(int j=0;j<objectsVector[i]->objectFrames.size();j++)
-					{
-						cout<< name<<":"<<objectsVector[i]->objectFrames[j].name<<endl;
-						if(name==objectsVector[i]->objectFrames[j].name)
-						{
-							for(int k=0;k<6;k++)
-							{
-								res.pose.push_back(objectsVector[i]->objectFrames[j].frame[k]);
-							}
-							break;
-						}
+					string KB_name;
+					KB_name+=worldVec[i].name[0];
+					for(int l=1; l<worldVec[i].name.size();l++)
+						KB_name+="-"+worldVec[i].name[l];
 
-					}
-
-					break;
+					res.names.push_back(KB_name);
 				}
 				else
 				{
-					cout<<"Object with name: "<<type<<" is not found in Knowledge base"<<endl;
+					for(int m=0;m<worldVec[i].value.size();m++)
+						res.pose.push_back(worldVec[i].value[m]);
+					return true;// normally when ask for a vector value, it is just one vector value
 				}
 			}
 		}
-		else if(requestInfo=="boundingBox")
-		{
-			for(int i=0;i<objectsVector.size();i++)
-			{
-				float boundingBox[6];
-				//				objectsVector[i]->BoundingBox(boundingBox);
-
-				for(int j=0;j<6;j++)
-				{
-					region.data.push_back(boundingBox[j]);
-				}
-				res.region.push_back(region);
-			}
-		}
-		else if(requestInfo=="boundingSphere")
-		{
-			for(int i=0;i<objectsVector.size();i++)
-			{
-				float boundingBall[4];
-				//				objectsVector[i]->BoundingBall(boundingBall);
-
-				for(int j=0;j<6;j++)
-				{
-					if(j<4)
-						region.data.push_back(boundingBall[j]);
-					else
-						region.data.push_back(0.0);
-				}
-				res.region.push_back(region);
-			}
-		}
-		else
-		{
-			cout<<"The request info is wrong: "<<requestInfo <<endl;
-		}
 	}
-	else if(type.find("Point") != std::string::npos)
-	{
 
-		for(int i=0;i<pointsVector.size();i++)
-		{
-			if(type==pointsVector[i].name)
-			{
-				for(int j=0;j<pointsVector[i].pose.size();j++)
-				{
-					res.pose.push_back(pointsVector[i].pose[j]);
-				}
-				cout<<pointsVector[i].name<<" ";
-				for(int j=0;j<pointsVector[i].pose.size();j++)
-					cout<<pointsVector[i].pose[j]<<" ";
-				cout<<endl;
-				break;
-			}
+//	knowledge_msgs::Region region;
+//	geometry_msgs::Vector3 PoseLinear,PoseAngular;
 
-		}
-	}
-	else if(type.find("JointValues") != std::string::npos)
-	{
-		string delim_type="+";
-		vector<string> agents_vector;
-		boost::split(agents_vector, requestInfo, boost::is_any_of(delim_type));
-		for(int i=0;i<agents_vector.size();i++)
-		{
-			region.data.clear();
-			if(agents_vector[i]=="LeftArm")
-				for(int j=0;j<7;j++)
-					region.data.push_back(EE_value[0][j]);
+//
 
-			else if(agents_vector[i]=="RightArm")
-				for(int j=0;j<7;j++)
-					region.data.push_back(EE_value[1][j]);
-
-			else
-				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;
-
-			res.region.push_back(region);
-		}
-
-		cout<<"left Arm q: ";
-		for (int i=0;i<res.region[0].data.size();i++)
-			cout<<res.region[0].data[i]<<" ";
-		cout<<endl;
-		cout<<"right Arm q: ";
-		for (int i=0;i<res.region[1].data.size();i++)
-			cout<<res.region[1].data[i]<<" ";
-		cout<<endl;
-
-
-
-	}
-	else
-	{
-		cout<<"Request type is wrong:"<<type<<endl;
-	}
+//	if(type.find("plane") != std::string::npos || type.find("cylinder") != std::string::npos || type.find("sphere") != std::string::npos)
+//	{
+//		if(requestInfo=="Pose")
+//		{
+//			for(int i=0;i<objectsVector.size();i++)
+//			{
+//				cout<< type<<":"<<objectsVector[i]->objName<<endl;
+//				if(type==objectsVector[i]->objName)
+//				{
+//					for(int j=0;j<objectsVector[i]->objectFrames.size();j++)
+//					{
+//						cout<< name<<":"<<objectsVector[i]->objectFrames[j].name<<endl;
+//						if(name==objectsVector[i]->objectFrames[j].name)
+//						{
+//							for(int k=0;k<6;k++)
+//							{
+//								res.pose.push_back(objectsVector[i]->objectFrames[j].frame[k]);
+//							}
+//							break;
+//						}
+//
+//					}
+//
+//					break;
+//				}
+//				else
+//				{
+//					cout<<"Object with name: "<<type<<" is not found in Knowledge base"<<endl;
+//				}
+//			}
+//		}
+//		else if(requestInfo=="boundingBox")
+//		{
+//			for(int i=0;i<objectsVector.size();i++)
+//			{
+//				float boundingBox[6];
+//				//				objectsVector[i]->BoundingBox(boundingBox);
+//
+//				for(int j=0;j<6;j++)
+//				{
+//					region.data.push_back(boundingBox[j]);
+//				}
+//				res.region.push_back(region);
+//			}
+//		}
+//		else if(requestInfo=="boundingSphere")
+//		{
+//			for(int i=0;i<objectsVector.size();i++)
+//			{
+//				float boundingBall[4];
+//				//				objectsVector[i]->BoundingBall(boundingBall);
+//
+//				for(int j=0;j<6;j++)
+//				{
+//					if(j<4)
+//						region.data.push_back(boundingBall[j]);
+//					else
+//						region.data.push_back(0.0);
+//				}
+//				res.region.push_back(region);
+//			}
+//		}
+//		else
+//		{
+//			cout<<"The request info is wrong: "<<requestInfo <<endl;
+//		}
+//	}
+//	else if(type.find("Point") != std::string::npos)
+//	{
+//
+//		for(int i=0;i<pointsVector.size();i++)
+//		{
+//			if(type==pointsVector[i].name)
+//			{
+//				for(int j=0;j<pointsVector[i].pose.size();j++)
+//				{
+//					res.pose.push_back(pointsVector[i].pose[j]);
+//				}
+//				cout<<pointsVector[i].name<<" ";
+//				for(int j=0;j<pointsVector[i].pose.size();j++)
+//					cout<<pointsVector[i].pose[j]<<" ";
+//				cout<<endl;
+//				break;
+//			}
+//
+//		}
+//	}
+//	else if(type.find("JointValues") != std::string::npos)
+//	{
+//		string delim_type="+";
+//		vector<string> agents_vector;
+//		boost::split(agents_vector, requestInfo, boost::is_any_of(delim_type));
+//		for(int i=0;i<agents_vector.size();i++)
+//		{
+//			region.data.clear();
+//			if(agents_vector[i]=="LeftArm")
+//				for(int j=0;j<7;j++)
+//					region.data.push_back(EE_value[0][j]);
+//
+//			else if(agents_vector[i]=="RightArm")
+//				for(int j=0;j<7;j++)
+//					region.data.push_back(EE_value[1][j]);
+//
+//			else
+//				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;
+//
+//			res.region.push_back(region);
+//		}
+//
+//		cout<<"left Arm q: ";
+//		for (int i=0;i<res.region[0].data.size();i++)
+//			cout<<res.region[0].data[i]<<" ";
+//		cout<<endl;
+//		cout<<"right Arm q: ";
+//		for (int i=0;i<res.region[1].data.size();i++)
+//			cout<<res.region[1].data[i]<<" ";
+//		cout<<endl;
+//
+//
+//
+//	}
+//	else
+//	{
+//		cout<<"Request type is wrong:"<<type<<endl;
+//	}
 
 	return true;
 };

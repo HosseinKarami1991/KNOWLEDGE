@@ -43,8 +43,8 @@ include_directories(
 
 #ADD_LIBRARY(endor /home/nasa/Documents/Endor/endor-master/aograph.cpp)
 add_library(Objects include/Objects.cpp)
-#add_library(Points include/Points.cpp)
-#add_library(CallBackClass src/CallBackClass.cpp)
+#add_library(Points include/Points.hpp)
+add_library(World include/World.cpp)
 #add_library(endorAction src/endorAction.cpp)
 
 
@@ -58,5 +58,6 @@ target_link_libraries(knowledge
    ${catkin_LIBRARIES}
 Objects
 #Points
+World
  )
-target_link_libraries(Objects pitt_msgs)
+#target_link_libraries(Objects pitt_msgs)

@@ -4,8 +4,8 @@
  *  Created on: Mar 9, 2017
  *      Author: Kourosh Darvish
  */
-#ifndef DOCUMENT_HPP
-#define DOCUMENT_H
+#ifndef OBJECTS_HPP
+#define OBJECTS_HPP
 
 #include <stdlib.h>
 #include <iostream>
@@ -307,31 +307,6 @@ public:
 // =======================================
 
 }  // namespace Objects
-
-class Point{
-public:
-	string name;
-	vector<float> pose;
-	Point(string Name, vector<float> Pose){
-		name=Name;
-		for (int i=0;i<Pose.size();i++)
-		{
-			pose.push_back(Pose[i]);
-		}
-	}
-	~Point(){}
-	void Print(void){
-		cout<<"******* Point::Print()  ******** "<<name<<endl;
-
-		cout<<"name: "<<name<<endl;
-		cout<<"pose: ";
-		for (int i=0;i<pose.size();i++)
-		{
-			cout<<pose[i]<<" ";
-		}
-		cout<<endl;
-	}
-};
 
 
 

@@ -72,7 +72,7 @@ void pittObjects::Sphere::GraspingPosition(void){
 	graspingPose[4]=objFrame[4];
 	graspingPose[5]=objFrame[5];
 
-	class Frame tempGrapsingFrame("graspingPose1",graspingPose);
+	Frame tempGrapsingFrame("graspingPose1",graspingPose);
 	objectFrames.push_back(tempGrapsingFrame);
 
 
@@ -84,7 +84,7 @@ void pittObjects::Sphere::GraspingPosition(void){
 	approachingPose[4]=graspingPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
 	approachingPose[5]=graspingPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
 
-	class Frame tempApproachingFrame("approachingPose1",approachingPose);
+	Frame tempApproachingFrame("approachingPose1",approachingPose);
 	objectFrames.push_back(tempApproachingFrame);
 
 }
@@ -94,7 +94,7 @@ void pittObjects::Sphere::FrameSet(void){
 	cout<<"Frame=> parallel to World Frame"<<endl;
 
 	float tempObjFrame[]={0.0, 0.0, 0.0,trackedShape.x_est_centroid,trackedShape.y_est_centroid,trackedShape.z_est_centroid };
-	class Frame tempFrame("centerFrame",tempObjFrame);
+	Frame tempFrame("centerFrame",tempObjFrame);
 	objectFrames.push_back(tempFrame);
 
 }
@@ -303,8 +303,8 @@ void pittObjects::Cylinder::GraspingPosition(void){
 		approachingPose[5]=objFrame[5]-RotMat(2,2)*GraspPoseDistance;// Z direction 2
 	}
 
-	class Frame temp_graspingFrame("graspingPose1",graspPose);
-	class Frame temp_approachingFrame("approachingPose1",approachingPose);
+	Frame temp_graspingFrame("graspingPose1",graspPose);
+	Frame temp_approachingFrame("approachingPose1",approachingPose);
 	objectFrames.push_back(temp_graspingFrame);
 	objectFrames.push_back(temp_approachingFrame);
 
@@ -371,7 +371,7 @@ void pittObjects::Cylinder::FrameSet(void){
 	objFrame[4]=trackedShape.y_est_centroid;
 	objFrame[5]=trackedShape.z_est_centroid;
 
-	class Frame temp_centerFrame("centerFrame",objFrame);
+	Frame temp_centerFrame("centerFrame",objFrame);
 	objectFrames.push_back(temp_centerFrame);
 
 }
@@ -630,19 +630,19 @@ void pittObjects::Plane::GraspingPosition(void){
 	graspPoseCenter[5]=center[2];
 
 
-	class Frame tempCenter("centerFrame",graspPoseCenter);
+	Frame tempCenter("centerFrame",graspPoseCenter);
 	objectFrames.push_back(tempCenter);
 
-	class Frame tempgp1("graspingPose1",graspPose1);
+	Frame tempgp1("graspingPose1",graspPose1);
 	objectFrames.push_back(tempgp1);
 
-	class Frame tempgp2("graspingPose2",graspPose2);
+	Frame tempgp2("graspingPose2",graspPose2);
 	objectFrames.push_back(tempgp2);
 
-	class Frame tempap1("approachingPose1",approachPose1);
+	Frame tempap1("approachingPose1",approachPose1);
 	objectFrames.push_back(tempap1);
 
-	class Frame tempap2("approachingPose2",approachPose2);
+	Frame tempap2("approachingPose2",approachPose2);
 	objectFrames.push_back(tempap2);
 
 	// screw poses:
