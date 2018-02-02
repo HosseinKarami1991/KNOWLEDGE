@@ -241,7 +241,7 @@ void pittObjects::Cylinder::GraspingPosition(void){
 
 	else
 	{
-		float VERTICAL_GRASPING_POINT_THRESHOLD=0.05;// 5 cm from top we grasp the object
+		float VERTICAL_GRASPING_POINT_THRESHOLD=0.03;// 5 cm from top we grasp the object
 		Eigen::Vector3f RefPoint,ObjPoint;
 		Eigen::Vector3f X_grasp, zPrime,Y_grasp,Z_grasp, EulerAngles;
 		ObjPoint(0)=objFrame[3];ObjPoint(1)= objFrame[4];ObjPoint(2)= objFrame[5];
@@ -371,7 +371,7 @@ void pittObjects::Cylinder::FrameSet(void){
 	objFrame[4]=trackedShape.y_est_centroid;
 	objFrame[5]=trackedShape.z_est_centroid;
 
-	Frame temp_centerFrame("centerFrame",objFrame);
+	Frame temp_centerFrame("centerFramePose",objFrame);
 	objectFrames.push_back(temp_centerFrame);
 
 }
@@ -630,7 +630,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	graspPoseCenter[5]=center[2];
 
 
-	Frame tempCenter("centerFrame",graspPoseCenter);
+	Frame tempCenter("centerFramePose",graspPoseCenter);
 	objectFrames.push_back(tempCenter);
 
 	Frame tempgp1("graspingPose1",graspPose1);

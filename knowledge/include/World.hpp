@@ -39,7 +39,7 @@ public:
 	World(void){}
 	World(vector<string> Name, vector<float> Value){
 		name=Name;
-		Value=value;
+		value=Value;
 	}
 
 	~World(){}

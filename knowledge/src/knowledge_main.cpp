@@ -64,13 +64,29 @@ int main(int argc, char **argv)
 	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TableAssembly.txt";
 
 	readPointsVector(pointPath, worldVec);
-	worldVec.resize(worldVec.size()+2);
 	left_q_index=worldVec.size();
 	right_q_index=worldVec.size()+1;
+	worldVec.resize(worldVec.size()+2);
+
 	worldVec[left_q_index].name.push_back("LeftArm_q");
 	worldVec[right_q_index].name.push_back("RightArm_q");
+	worldVec[left_q_index].name.push_back("Pose");
+	worldVec[right_q_index].name.push_back("pose");
+
+
+	cout<<"left_q_index: "<<left_q_index<<"right_q_index: "<<right_q_index<<endl;
+	worldVec[left_q_index].Print();
+	worldVec[right_q_index].Print();
 
 	ros::ServiceServer service = nh.advertiseService("knowledgeService",KnowledgeQuery);
+
+	cout<<BOLD("******* World Vector ******")<<endl;
+	cout<<BOLD("***************************")<<endl;
+	for(int i=0;i<worldVec.size();i++)
+	{
+		cout<<i<<endl;
+		worldVec[i].Print();
+	}
 
 	cout << "*****************" << endl;
 	cout << "Knowledge Representation is alive: " << endl;
@@ -78,6 +94,77 @@ int main(int argc, char **argv)
 	ros::spin();
 	return 1;
 }
+
+//***************************************************************************
+//***************************************************************************
+
+bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
+	cout<<FBLU(BOLD("A Knowledge Query is arrived:"))<<endl;
+
+	string type=req.reqType;
+	string name=req.Name;
+	string requestInfo=req.requestInfo;
+
+	cout<<"MSG:: type: "<<type<<", requestInfo: "<<requestInfo<<endl;
+	vector<string> typeVec,requestInfoVec;
+	boost::split(typeVec, type, boost::is_any_of("-")); // Exmpl: Point-Point1, Point1, Cylinder-Cylinder1, Cylinder, Cylinder-Cylinder1-graspingPose1, Cylinder-Cylinder1-centerFrame
+	boost::split(requestInfoVec, requestInfo, boost::is_any_of("-"));// Pose, Pose-Name, Center, Center-Name, boundingBox, boundingBall
+	bool ret_name=false; // trturn name (if false: value)
+
+	if(requestInfo.find("Name") != std::string::npos)
+	{
+		ret_name=true;
+		cout<<"return name"<<endl;
+	}
+	else
+	{
+		cout<<"return values"<<endl;
+	}
+
+
+	for(int i=0;i<worldVec.size();i++)
+	{
+		int Occurence=0;
+		for(int j=0; j<worldVec[i].name.size();j++)// cylinder cylinder1 graspingPose1
+		{
+			for(int k=0;k<typeVec.size();k++) // cylinder1 graspingPose1
+			{
+//				cout<<"worldVec["<<i<<"].name["<<j<<"]: "<<worldVec[i].name[j]<<", typeVec["<<k<<"]: "<<typeVec[k]<<endl;
+				if(worldVec[i].name[j]==typeVec[k])
+				{
+					Occurence++;
+//					cout<<Occurence<<endl;
+				}
+			}
+			if(Occurence==typeVec.size() && worldVec[i].name.back().find(requestInfoVec[0]) != std::string::npos)
+			{
+				if(ret_name==true)
+				{
+					string KB_name;
+					KB_name+=worldVec[i].name[0];
+					for(int l=1; l<worldVec[i].name.size();l++)
+						KB_name+="-"+worldVec[i].name[l];
+
+					cout<<"Res: "<<KB_name<<endl;
+					res.names.push_back(KB_name);
+				}
+				else
+				{
+					cout<<"Res: ";
+					for(int m=0;m<worldVec[i].value.size();m++)
+					{
+						res.pose.push_back(worldVec[i].value[m]);
+						cout<<worldVec[i].value[m]<<" ";
+					}
+					cout<<endl;
+					return true;// normally when ask for a vector value, it is just one vector value
+				}
+			}
+		}
+	}
+	return true;
+};
+
 
 
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
@@ -190,6 +277,11 @@ void CallBackShapes(const TrackedShapes& outShapes){
 					worldVec.push_back(instance);
 				}
 			}
+			cout<<BOLD("******* World Vector ******")<<endl;
+			cout<<BOLD("***************************")<<endl;
+			for(int i=0;i<worldVec.size();i++)
+				worldVec[i].Print();
+
 			obj_call_back_flag=false;
 		}
 	}
@@ -198,54 +290,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 
 
 
-//***************************************************************************
-//***************************************************************************
 
-bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
-	cout<<FBLU(BOLD("A Knowledge Query is arrived:"))<<endl;
-
-	string type=req.reqType;
-	string name=req.Name;
-	string requestInfo=req.requestInfo;
-
-	cout<<"MSG:: type: "<<type<<", requestInfo: "<<requestInfo<<endl;
-	vector<string> typeVec,requestInfoVec;
-	boost::split(typeVec, type, boost::is_any_of("-")); // Exmpl: Point-Point1, Point1, Cylinder-Cylinder1, Cylinder, Cylinder-Cylinder1-graspingPose1, Cylinder-Cylinder1-centerFrame
-	boost::split(requestInfoVec, requestInfo, boost::is_any_of("-"));// Pose, Pose-Name, Center, Center-Name, boundingBox, boundingBall
-	bool ret_name=false; // trturn name (if false: value)
-
-	if(requestInfo.find("Name") != std::string::npos)
-		ret_name=true;
-
-	for(int i=0;i<worldVec.size();i++)
-	{
-		for(int j=0; j<worldVec[i].name.size();j++)
-		{
-			int Occurence=0;
-			for(int k=0;k<typeVec.size();k++)
-				if(worldVec[i].name[j]==typeVec[k])
-					Occurence++;
-
-			if(Occurence==typeVec.size() && worldVec[i].name.back().find(requestInfoVec[0]) != std::string::npos)
-			{
-				if(ret_name==true)
-				{
-					string KB_name;
-					KB_name+=worldVec[i].name[0];
-					for(int l=1; l<worldVec[i].name.size();l++)
-						KB_name+="-"+worldVec[i].name[l];
-
-					res.names.push_back(KB_name);
-				}
-				else
-				{
-					for(int m=0;m<worldVec[i].value.size();m++)
-						res.pose.push_back(worldVec[i].value[m]);
-					return true;// normally when ask for a vector value, it is just one vector value
-				}
-			}
-		}
-	}
 
 //	knowledge_msgs::Region region;
 //	geometry_msgs::Vector3 PoseLinear,PoseAngular;
@@ -378,8 +423,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 //		cout<<"Request type is wrong:"<<type<<endl;
 //	}
 
-	return true;
-};
+
 
 bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter){
 	bool isObjectInWS=true;
