@@ -32,7 +32,7 @@ vector<shared_ptr<pittObjects::Objects>> objectsVector;
 vector<World> worldVec;
 int left_q_index,right_q_index;
 
-int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=0, NumberCylinder=2, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -186,8 +186,6 @@ void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 //********************************************************************************
 void CallBackShapes(const TrackedShapes& outShapes){
 	TrackedShape::Ptr outShape ( new TrackedShape);
-	int obj_counter=0; //! No of objects that ransac recognize and is not unknown
-	int cylinder_counter=1, sphere_counter=1, plane_counter=1, cone_counter=1, unknown_counter=1;
 	string obj_name;
 
 	//	NoCorrectRecognizedObject=0;
@@ -218,7 +216,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 				else if (objectName=="plane")
 				{
 					perceivedNoPlane++;
-					obj_name=objectName+to_string(plane_counter);
+					obj_name=objectName+to_string(perceivedNoPlane);
 
 					objectsVector.emplace_back(make_shared <pittObjects::Plane>(objID,obj_name,tracked_Shape));
 				}
@@ -226,7 +224,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 				else if (objectName=="cylinder")
 				{
 					perceivedNoCylinder++;
-					obj_name=objectName+to_string(cylinder_counter);
+					obj_name=objectName+to_string(perceivedNoCylinder);
 
 					objectsVector.emplace_back(make_shared <pittObjects::Cylinder>(objID,obj_name,tracked_Shape));
 				}
@@ -234,13 +232,13 @@ void CallBackShapes(const TrackedShapes& outShapes){
 				else if (objectName=="cone")
 				{
 					perceivedNoCone++;
-					obj_name=objectName+to_string(cone_counter);
+					obj_name=objectName+to_string(perceivedNoCone);
 					objectsVector.emplace_back(make_shared <pittObjects::Cone>(objID,obj_name,tracked_Shape));
 				}
 				else if (objectName=="unknown")
 				{
 					perceivedNoUnknown++;
-					obj_name=objectName+to_string(unknown_counter);
+					obj_name=objectName+to_string(perceivedNoUnknown);
 					objectsVector.emplace_back(make_shared <pittObjects::Unknown>(objID,obj_name,tracked_Shape));
 				}
 				else
