@@ -32,7 +32,7 @@ vector<shared_ptr<pittObjects::Objects>> objectsVector;
 vector<World> worldVec;
 int left_q_index,right_q_index;
 
-int NumberSphere=0, NumberCylinder=2, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6];
@@ -125,7 +125,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 	for(int i=0;i<worldVec.size();i++)
 	{
 		int Occurence=0;
-		for(int j=0; j<worldVec[i].name.size();j++)// cylinder cylinder1 graspingPose1
+		for(int j=0; j<worldVec[i].name.size();j++)// cylinder cylinder1 graspingPose1, point4 Pose,
 		{
 			for(int k=0;k<typeVec.size();k++) // cylinder1 graspingPose1
 			{
@@ -159,6 +159,7 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 					cout<<endl;
 					return true;// normally when ask for a vector value, it is just one vector value
 				}
+				break; // if a index of world vec happened, the same index should be passed and not happen again.
 			}
 		}
 	}
@@ -172,6 +173,9 @@ void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 	for (int i=0;i<7;i++)
 		leftQ.push_back(msg.data[i]);
 	worldVec[left_q_index].value=leftQ;
+
+	worldVec[left_q_index].Print();
+
 };
 
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
@@ -180,6 +184,9 @@ void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 		rightQ.push_back(msg.data[i]);
 
 	worldVec[right_q_index].value=rightQ;
+
+	worldVec[right_q_index].Print();
+
 };
 
 //********************************************************************************

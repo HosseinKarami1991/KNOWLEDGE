@@ -427,8 +427,8 @@ void pittObjects::Plane::GraspingPosition(void){
 		6- add the found frames to the frame vector
 	 */
 
-	float GRASPING_DIS=0.08;// 5 cm from the plate border the grasping pose and the approaching pose
-	float PLANE_THICKNESS=0.04;
+	float GRASPING_DIS=0.05;// 5 cm from the plate border the grasping pose and the approaching pose
+	float PLANE_THICKNESS=0.02;
 
 	vector<vector<float>> verticesOld, vertices;
 	vector<float> vertex, center, planeCoef;
@@ -572,11 +572,33 @@ void pittObjects::Plane::GraspingPosition(void){
 	graspingPose1 		=graspingPose1 - PLANE_THICKNESS* Y1_grasp;
 	approachingPose1	=approachingPose1  - PLANE_THICKNESS* Y1_grasp;
 
+	cout<<"graspingPose2: "<<graspingPose2(0)<<" "<<graspingPose2(1)<<" "<<graspingPose2(2)<<endl;
+	cout<<"approachingPose2: "<<approachingPose2(0)<<" "<<approachingPose2(1)<<" "<<approachingPose2(2)<<endl;
 	graspingPose2 =graspingPose2 - PLANE_THICKNESS* Y1_grasp;
 	approachingPose2 =approachingPose2- PLANE_THICKNESS* Y1_grasp;
 
+	cout<<"graspingPose2: "<<graspingPose2(0)<<" "<<graspingPose2(1)<<" "<<graspingPose2(2)<<endl;
+	cout<<"approachingPose2: "<<approachingPose2(0)<<" "<<approachingPose2(1)<<" "<<approachingPose2(2)<<endl;
 
 	Eigen::Matrix3f RotMat1, RotMat2, RotMatCenter;
+	float angle=00.0*3.1415/180.0;
+	Eigen::Matrix3f rot1(Eigen::AngleAxisf(angle,Eigen::Vector3f::UnitY())), rot2(Eigen::AngleAxisf(angle,Eigen::Vector3f::UnitY()));
+//	Eigen::Matrix3f t=tf.rotation();
+
+//	cout<<"Y1_grasp: "<<endl;
+//	cout<<Y1_grasp(0)<<" "<<Y1_grasp(1)<<" "<<Y1_grasp(2)<<endl;
+//	cout<<endl;
+//
+//	cout<<"Transformation MAtrix: rot1: "<<endl;
+//	cout<<rot1(0,0)<<" "<<rot1(0,1)<<" "<<rot1(0,2)<<endl;
+//	cout<<rot1(1,0)<<" "<<rot1(1,1)<<" "<<rot1(1,2)<<endl;
+//	cout<<rot1(2,0)<<" "<<rot1(2,1)<<" "<<rot1(2,2)<<endl;
+//	cout<<endl;
+//	cout<<"Transformation MAtrix: rot2: "<<endl;
+//	cout<<rot2(0,0)<<" "<<rot2(0,1)<<" "<<rot2(0,2)<<endl;
+//	cout<<rot2(1,0)<<" "<<rot2(1,1)<<" "<<rot2(1,2)<<endl;
+//	cout<<rot2(2,0)<<" "<<rot2(2,1)<<" "<<rot2(2,2)<<endl;
+//	cout<<endl;
 
 	RotMat1(0,0)=X1_grasp(0); RotMat1(0,1)=Y1_grasp(0); RotMat1(0,2)=Z1_grasp(0);
 	RotMat1(1,0)=X1_grasp(1); RotMat1(1,1)=Y1_grasp(1); RotMat1(1,2)=Z1_grasp(1);
@@ -587,6 +609,21 @@ void pittObjects::Plane::GraspingPosition(void){
 	RotMat2(2,0)=X2_grasp(2); RotMat2(2,1)=Y2_grasp(2); RotMat2(2,2)=Z2_grasp(2);
 
 	RotMatCenter=RotMat1;
+
+//	cout<<"Transformation MAtrix: RotMat1: "<<endl;
+//	cout<<RotMat1(0,0)<<" "<<RotMat1(0,1)<<" "<<RotMat1(0,2)<<endl;
+//	cout<<RotMat1(1,0)<<" "<<RotMat1(1,1)<<" "<<RotMat1(1,2)<<endl;
+//	cout<<RotMat1(2,0)<<" "<<RotMat1(2,1)<<" "<<RotMat1(2,2)<<endl;
+//	cout<<endl;
+
+	RotMat1=RotMat1*rot1;
+	RotMat2=RotMat2*rot2;
+
+//	cout<<"Transformation MAtrix: RotMat1: "<<endl;
+//	cout<<RotMat1(0,0)<<" "<<RotMat1(0,1)<<" "<<RotMat1(0,2)<<endl;
+//	cout<<RotMat1(1,0)<<" "<<RotMat1(1,1)<<" "<<RotMat1(1,2)<<endl;
+//	cout<<RotMat1(2,0)<<" "<<RotMat1(2,1)<<" "<<RotMat1(2,2)<<endl;
+//	cout<<endl;
 
 	EulerAngles1		=RotMat1.eulerAngles(2,1,0);
 	EulerAngles2		=RotMat2.eulerAngles(2,1,0);
@@ -601,7 +638,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	graspPose1[4]=graspingPose1(1);
 	graspPose1[5]=graspingPose1(2);
 
-	graspPose2[0]=EulerAngles1(0); //Y
+	graspPose2[0]=EulerAngles2(0); //Y
 	graspPose2[1]=EulerAngles2(1);  //P
 	graspPose2[2]=EulerAngles2(2);  //R
 	graspPose2[3]=graspingPose2(0);
@@ -633,17 +670,21 @@ void pittObjects::Plane::GraspingPosition(void){
 	Frame tempCenter("centerFramePose",graspPoseCenter);
 	objectFrames.push_back(tempCenter);
 
+	Frame tempap1("approachingPose1",approachPose1);
+	objectFrames.push_back(tempap1);
+
 	Frame tempgp1("graspingPose1",graspPose1);
 	objectFrames.push_back(tempgp1);
+
+
+	Frame tempap2("approachingPose2",approachPose2);
+	objectFrames.push_back(tempap2);
 
 	Frame tempgp2("graspingPose2",graspPose2);
 	objectFrames.push_back(tempgp2);
 
-	Frame tempap1("approachingPose1",approachPose1);
-	objectFrames.push_back(tempap1);
 
-	Frame tempap2("approachingPose2",approachPose2);
-	objectFrames.push_back(tempap2);
+
 
 	// screw poses:
 	float SCREW_DIS=0.05, SCREW_LENGTH=0.035; // the screw distance from the borders of the plate are 5 cm
