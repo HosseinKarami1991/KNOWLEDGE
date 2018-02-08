@@ -174,7 +174,7 @@ void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 		leftQ.push_back(msg.data[i]);
 	worldVec[left_q_index].value=leftQ;
 
-	worldVec[left_q_index].Print();
+//	worldVec[left_q_index].Print();
 
 };
 
@@ -185,7 +185,7 @@ void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 
 	worldVec[right_q_index].value=rightQ;
 
-	worldVec[right_q_index].Print();
+//	worldVec[right_q_index].Print();
 
 };
 
