@@ -308,6 +308,82 @@ void pittObjects::Cylinder::GraspingPosition(void){
 	objectFrames.push_back(temp_graspingFrame);
 	objectFrames.push_back(temp_approachingFrame);
 
+	//**********************************************
+	//  Center Frame Set of the Cylinder
+	//**********************************************
+	Eigen::Vector3f X_world, Y_world, Z_world, X_cylinder, Y_cylinder , Z_cylinder, EulerAnglesCenter,X_cross;
+	double x_cosine;	//! cosine of angle between x_world, x_cylinder, inner product
+	double x_sine;	//! sine of angle between x_world, x_cylinder
+
+	Eigen::Matrix3f R, X_cross_skewSym, I,X_cross_skewSym2;
+	X_world(0)=1.0; X_world(1)=0.0; X_world(2)=0.0;
+	Y_world(0)=0.0; Y_world(1)=1.0; Y_world(2)=0.0;
+	Z_world(0)=0.0; Z_world(1)=0.0; Z_world(2)=1.0;
+
+	X_cylinder(0)=trackedShape.coefficients[3];
+	X_cylinder(1)=trackedShape.coefficients[4];
+	X_cylinder(2)=trackedShape.coefficients[5];
+
+	X_cross=X_world.cross(X_cylinder); //check
+	x_sine=X_cross.norm(); //check
+	x_cosine=X_world.dot(X_cylinder);
+
+	X_cross_skewSym(0,0)= 0.0;			X_cross_skewSym(0,1)= -X_cross(2);	X_cross_skewSym(0,2)= X_cross(1);
+	X_cross_skewSym(1,0)= X_cross(2);	X_cross_skewSym(1,1)= 0.0;			X_cross_skewSym(1,2)= -X_cross(0);
+	X_cross_skewSym(2,0)= -X_cross(1);	X_cross_skewSym(2,1)= X_cross(0);	X_cross_skewSym(2,2)= 0.0;
+	//	I(1,1)= 1.0; I(1,2)= 0.0; I(1,3)= 0.0;
+	//	I(2,1)= 0.0; I(2,2)= 1.0; I(2,3)= 0.0;
+	//	I(3,1)= 0.0; I(3,2)= 0.0; I(3,3)= 1.0;
+	I.setIdentity();
+
+	if (x_cosine==-1.0)
+	{
+		R(0,0)=-1.0; R(0,1)= 0.0; R(0,2)= 0.0;
+		R(1,0)= 0.0; R(1,1)=-1.0; R(1,2)= 0.0;
+		R(2,0)= 0.0; R(2,1)= 0.0; R(2,2)= 1.0;
+	}
+	else
+	{
+
+		X_cross_skewSym2=X_cross_skewSym*X_cross_skewSym;
+		for (int i=0;i<3;i++)
+			for (int j=0;j<3;j++)
+				X_cross_skewSym2(i,j)=X_cross_skewSym2(i,j)*((1.0-x_cosine)/(x_sine*x_sine));
+
+		R=I+X_cross_skewSym+ X_cross_skewSym2;
+	}
+
+	EulerAnglesCenter=R.eulerAngles(2,1,0);; //[yaw, pitch, roll]
+
+	float objFrameCenter[6];
+	RotMat_World2Obj=R;
+	objFrameCenter[0]=EulerAnglesCenter(0); // Y
+	objFrameCenter[1]=EulerAnglesCenter(1);// P
+	objFrameCenter[2]=EulerAnglesCenter(2); // R
+	objFrameCenter[3]=trackedShape.x_est_centroid;
+	objFrameCenter[4]=trackedShape.y_est_centroid;
+	objFrameCenter[5]=trackedShape.z_est_centroid;
+
+	Frame temp_centerFrame("centerFramePose",objFrameCenter);
+	objectFrames.push_back(temp_centerFrame);
+	//******************
+	//******** Screwing Pose of the Cylinder **********
+	//******************
+
+	float objFrameScrewingPose[6];
+
+	objFrameScrewingPose[0]=graspPose[0]; //Y
+	objFrameScrewingPose[1]=graspPose[1];// P
+	objFrameScrewingPose[2]=graspPose[2];// R
+	objFrameScrewingPose[3]=objFrameCenter[3]+RotMat(0,0)*height/2.0;
+	objFrameScrewingPose[4]=objFrameCenter[4]+RotMat(1,0)*height/2.0;
+	objFrameScrewingPose[5]=objFrameCenter[5]+RotMat(2,0)*height/2.0;
+
+
+	Frame temp_screwFrame("screwFramePose",objFrameScrewingPose);
+	objectFrames.push_back(temp_screwFrame);
+
+
 }
 
 void pittObjects::Cylinder::FrameSet(void){
@@ -713,12 +789,47 @@ void pittObjects::Plane::GraspingPosition(void){
 	cout<<"screw 3: "<<screw3(0)<<" "<<screw3(1)<<" "<<screw3(2)<<endl;
 	cout<<"screw 4: "<<screw4(0)<<" "<<screw4(1)<<" "<<screw4(2)<<endl;
 
+	float screw1Pose[6], screw2Pose[6], screw3Pose[6], screw4Pose[6];
+	//3.14 0 3.14
+	screw1Pose[0]=3.14; //Y
+	screw1Pose[1]=0.0;  //P
+	screw1Pose[2]=3.14;  //R
+	screw1Pose[3]=screw1(0);
+	screw1Pose[4]=screw1(1);
+	screw1Pose[5]=screw1(2);
 
+	screw2Pose[0]=3.14; //Y
+	screw2Pose[1]=0.0;  //P
+	screw2Pose[2]=3.14;  //R
+	screw2Pose[3]=screw2(0);
+	screw2Pose[4]=screw2(1);
+	screw2Pose[5]=screw2(2);
 
+	screw3Pose[0]=3.14; //Y
+	screw3Pose[1]=0.0;  //P
+	screw3Pose[2]=3.14;  //R
+	screw3Pose[3]=screw3(0);
+	screw3Pose[4]=screw3(1);
+	screw3Pose[5]=screw3(2);
 
+	screw4Pose[0]=3.14; //Y
+	screw4Pose[1]=0.0;  //P
+	screw4Pose[2]=3.14;  //R
+	screw4Pose[3]=screw4(0);
+	screw4Pose[4]=screw4(1);
+	screw4Pose[5]=screw4(2);
 
+	Frame tempScrew1("screwPose1",screw1Pose);
+	objectFrames.push_back(tempScrew1);
 
+	Frame tempScrew2("screwPose2",screw2Pose);
+	objectFrames.push_back(tempScrew2);
 
+	Frame tempScrew3("screwPose3",screw3Pose);
+	objectFrames.push_back(tempScrew3);
+
+	Frame tempScrew4("screwPose4",screw4Pose);
+	objectFrames.push_back(tempScrew4);
 
 }
 
