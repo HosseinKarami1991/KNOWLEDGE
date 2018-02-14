@@ -72,9 +72,11 @@ void pittObjects::Sphere::GraspingPosition(void){
 	graspingPose[4]=objFrame[4];
 	graspingPose[5]=objFrame[5];
 
-	Frame tempGrapsingFrame("graspingPose1",graspingPose);
+	vector<string> name;
+	name.push_back("graspingPose1");
+	Frame tempGrapsingFrame(name,graspingPose);
 	objectFrames.push_back(tempGrapsingFrame);
-
+	name.clear();
 
 	approachingPose[0]=graspingPose[0]; //Y
 	approachingPose[1]=graspingPose[1];// P
@@ -84,18 +86,22 @@ void pittObjects::Sphere::GraspingPosition(void){
 	approachingPose[4]=graspingPose[4]-RotMat_world2Grasping(1,2)*GraspPoseDistance;
 	approachingPose[5]=graspingPose[5]-RotMat_world2Grasping(2,2)*GraspPoseDistance;
 
-	Frame tempApproachingFrame("approachingPose1",approachingPose);
+	name.push_back("approachingPose1");
+	Frame tempApproachingFrame(name,approachingPose);
 	objectFrames.push_back(tempApproachingFrame);
-
+	name.clear();
 }
 
 void pittObjects::Sphere::FrameSet(void){
 	cout<<"Sphere::FrameSet"<<endl;
 	cout<<"Frame=> parallel to World Frame"<<endl;
 
+	vector<string> name;
 	float tempObjFrame[]={0.0, 0.0, 0.0,trackedShape.x_est_centroid,trackedShape.y_est_centroid,trackedShape.z_est_centroid };
-	Frame tempFrame("centerFrame",tempObjFrame);
+	name.push_back("centerFrame");
+	Frame tempFrame(name,tempObjFrame);
 	objectFrames.push_back(tempFrame);
+	name.clear();
 
 }
 
@@ -154,7 +160,8 @@ void pittObjects::Cylinder::BoundingBall(void){
 void pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"Cylinder::GraspingPosition"<<endl;
 
-	float graspPose[6]; float approachingPose[6];
+	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6];
+
 
 	Eigen::Vector3f Vec_ObjFr2GraspFr, vec_Grasping; //YPR
 	Eigen::Matrix3f Rot_Obj2Grasp, Rot_Grasping,RotMat;
@@ -237,6 +244,13 @@ void pittObjects::Cylinder::GraspingPosition(void){
 		approachingPose[3]=graspPose[3]+normalAxis[0]*GraspPoseDistance;
 		approachingPose[4]=graspPose[4]+normalAxis[1]*GraspPoseDistance;
 		approachingPose[5]=graspPose[5]+normalAxis[2]*GraspPoseDistance;
+
+		objFrameScrewingPose[0]=graspPose[0]; //Y
+		objFrameScrewingPose[1]=graspPose[1];// P
+		objFrameScrewingPose[2]=graspPose[2];// R
+		objFrameScrewingPose[3]=objFrame[3]-normalAxis[0]*height/2.0;
+		objFrameScrewingPose[4]=objFrame[4]-normalAxis[1]*height/2.0;
+		objFrameScrewingPose[5]=objFrame[5]-normalAxis[2]*height/2.0;
 	}
 
 	else
@@ -301,12 +315,34 @@ void pittObjects::Cylinder::GraspingPosition(void){
 		approachingPose[3]=objFrame[3]-RotMat(0,2)*GraspPoseDistance; //Z direction 0
 		approachingPose[4]=objFrame[4]-RotMat(1,2)*GraspPoseDistance;// Z direction 1
 		approachingPose[5]=objFrame[5]-RotMat(2,2)*GraspPoseDistance;// Z direction 2
+
+		objFrameScrewingPose[0]=graspPose[0]; //Y
+		objFrameScrewingPose[1]=graspPose[1];// P
+		objFrameScrewingPose[2]=graspPose[2];// R
+		objFrameScrewingPose[3]=objFrame[3]+RotMat(0,0)*height/2.0;
+		objFrameScrewingPose[4]=objFrame[4]+RotMat(1,0)*height/2.0;
+		objFrameScrewingPose[5]=objFrame[5]+RotMat(2,0)*height/2.0;
 	}
 
-	Frame temp_graspingFrame("graspingPose1",graspPose);
-	Frame temp_approachingFrame("approachingPose1",approachingPose);
+
+
+	vector<string> name;
+	name.push_back("graspingPose1");
+	Frame temp_graspingFrame(name,graspPose);
+	name.clear();
+
+	name.push_back("approachingPose1");
+	Frame temp_approachingFrame(name,approachingPose);
+	name.clear();
+
+	name.push_back("screwFramePose");
+	Frame temp_screwFrame(name,objFrameScrewingPose);
+	name.clear();
+
 	objectFrames.push_back(temp_graspingFrame);
 	objectFrames.push_back(temp_approachingFrame);
+	objectFrames.push_back(temp_screwFrame);
+
 
 	//**********************************************
 	//  Center Frame Set of the Cylinder
@@ -364,24 +400,11 @@ void pittObjects::Cylinder::GraspingPosition(void){
 	objFrameCenter[4]=trackedShape.y_est_centroid;
 	objFrameCenter[5]=trackedShape.z_est_centroid;
 
-	Frame temp_centerFrame("centerFramePose",objFrameCenter);
+
+	name.push_back("centerFramePose");
+	Frame temp_centerFrame(name,objFrameCenter);
 	objectFrames.push_back(temp_centerFrame);
-	//******************
-	//******** Screwing Pose of the Cylinder **********
-	//******************
-
-	float objFrameScrewingPose[6];
-
-	objFrameScrewingPose[0]=graspPose[0]; //Y
-	objFrameScrewingPose[1]=graspPose[1];// P
-	objFrameScrewingPose[2]=graspPose[2];// R
-	objFrameScrewingPose[3]=objFrameCenter[3]+RotMat(0,0)*height/2.0;
-	objFrameScrewingPose[4]=objFrameCenter[4]+RotMat(1,0)*height/2.0;
-	objFrameScrewingPose[5]=objFrameCenter[5]+RotMat(2,0)*height/2.0;
-
-
-	Frame temp_screwFrame("screwFramePose",objFrameScrewingPose);
-	objectFrames.push_back(temp_screwFrame);
+	name.clear();
 
 
 }
@@ -447,8 +470,11 @@ void pittObjects::Cylinder::FrameSet(void){
 	objFrame[4]=trackedShape.y_est_centroid;
 	objFrame[5]=trackedShape.z_est_centroid;
 
-	Frame temp_centerFrame("centerFramePose",objFrame);
-	objectFrames.push_back(temp_centerFrame);
+//	vector<string> name;
+//	name.push_back("centerFramePose");
+//	Frame temp_centerFrame(name,objFrame);
+//	objectFrames.push_back(temp_centerFrame);
+//	name.clear();
 
 }
 
@@ -743,30 +769,40 @@ void pittObjects::Plane::GraspingPosition(void){
 	graspPoseCenter[5]=center[2];
 
 
-	Frame tempCenter("centerFramePose",graspPoseCenter);
+	vector<string> name;
+	name.push_back("centerFramePose");
+	Frame tempCenter(name,graspPoseCenter);
 	objectFrames.push_back(tempCenter);
+	name.clear();
 
-	Frame tempap1("approachingPose1",approachPose1);
+	name.push_back("approachingPose1");
+	Frame tempap1(name,approachPose1);
 	objectFrames.push_back(tempap1);
+	name.clear();
 
-	Frame tempgp1("graspingPose1",graspPose1);
+	name.push_back("graspingPose1");
+	Frame tempgp1(name,graspPose1);
 	objectFrames.push_back(tempgp1);
+	name.clear();
 
-
-	Frame tempap2("approachingPose2",approachPose2);
+	name.push_back("approachingPose2");
+	Frame tempap2(name,approachPose2);
 	objectFrames.push_back(tempap2);
+	name.clear();
 
-	Frame tempgp2("graspingPose2",graspPose2);
+	name.push_back("approachingPose2");
+	Frame tempgp2(name,graspPose2);
 	objectFrames.push_back(tempgp2);
+	name.clear();
 
 
 
 
 	// screw poses:
-	float SCREW_DIS=0.05, SCREW_LENGTH=0.035; // the screw distance from the borders of the plate are 5 cm
+	float SCREW_DIS=0.05, SCREW_LENGTH=0.03; // the screw distance from the borders of the plate are 5 cm
 
 	// we use the frames on the center frame (= gp1 frame) in order to find the vectors to move from vertices of the plate to the screw poses
-	Eigen::Vector3f screw1, screw2, screw3, screw4 ;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+	Eigen::Vector3f screw1, screw2, screw3, screw4, approachScrew1, approachScrew2, approachScrew3, approachScrew4 ;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
 
 	screw1={vertices[0][0], vertices[0][1],vertices[0][2]};
 	screw2={vertices[1][0], vertices[1][1],vertices[1][2]};
@@ -777,6 +813,13 @@ void pittObjects::Plane::GraspingPosition(void){
 	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-SCREW_LENGTH* Y1_grasp;
 	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-SCREW_LENGTH* Y1_grasp;
 	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-SCREW_LENGTH* Y1_grasp;
+
+	approachScrew1=screw1; approachScrew2=screw2; approachScrew3=screw3; approachScrew4=screw4;
+
+	approachScrew1=approachScrew1-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew2=approachScrew2-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew3=approachScrew3-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew4=approachScrew4-3.0*SCREW_LENGTH* Y1_grasp;
 
 	Eigen::Vector3f screw1Euler, screw2Euler, screw3Euler, screw4Euler; // Pi,0,PI
 
@@ -790,6 +833,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	cout<<"screw 4: "<<screw4(0)<<" "<<screw4(1)<<" "<<screw4(2)<<endl;
 
 	float screw1Pose[6], screw2Pose[6], screw3Pose[6], screw4Pose[6];
+	float approachScrew1Pose[6], approachScrew2Pose[6], approachScrew3Pose[6], approachScrew4Pose[6];
 	//3.14 0 3.14
 	screw1Pose[0]=3.14; //Y
 	screw1Pose[1]=0.0;  //P
@@ -819,17 +863,82 @@ void pittObjects::Plane::GraspingPosition(void){
 	screw4Pose[4]=screw4(1);
 	screw4Pose[5]=screw4(2);
 
-	Frame tempScrew1("screwPose1",screw1Pose);
+	approachScrew1Pose[0]=3.14; //Y
+	approachScrew1Pose[1]=0.0;  //P
+	approachScrew1Pose[2]=3.14;  //R
+	approachScrew1Pose[3]=approachScrew1(0);
+	approachScrew1Pose[4]=approachScrew1(1);
+	approachScrew1Pose[5]=approachScrew1(2);
+
+	approachScrew2Pose[0]=3.14; //Y
+	approachScrew2Pose[1]=0.0;  //P
+	approachScrew2Pose[2]=3.14;  //R
+	approachScrew2Pose[3]=approachScrew2(0);
+	approachScrew2Pose[4]=approachScrew2(1);
+	approachScrew2Pose[5]=approachScrew2(2);
+
+	approachScrew3Pose[0]=3.14; //Y
+	approachScrew3Pose[1]=0.0;  //P
+	approachScrew3Pose[2]=3.14;  //R
+	approachScrew3Pose[3]=approachScrew3(0);
+	approachScrew3Pose[4]=approachScrew3(1);
+	approachScrew3Pose[5]=approachScrew3(2);
+
+	approachScrew4Pose[0]=3.14; //Y
+	approachScrew4Pose[1]=0.0;  //P
+	approachScrew4Pose[2]=3.14;  //R
+	approachScrew4Pose[3]=approachScrew4(0);
+	approachScrew4Pose[4]=approachScrew4(1);
+	approachScrew4Pose[5]=approachScrew4(2);
+
+
+	name.push_back("screwPose");
+	name.push_back("screwPose1");
+	Frame tempScrew1(name,screw1Pose);
 	objectFrames.push_back(tempScrew1);
+	name.clear();
 
-	Frame tempScrew2("screwPose2",screw2Pose);
+	name.push_back("screwPose");
+	name.push_back("screwPose2");
+	Frame tempScrew2(name,screw2Pose);
 	objectFrames.push_back(tempScrew2);
+	name.clear();
 
-	Frame tempScrew3("screwPose3",screw3Pose);
+	name.push_back("screwPose");
+	name.push_back("screwPose3");
+	Frame tempScrew3(name,screw3Pose);
 	objectFrames.push_back(tempScrew3);
+	name.clear();
 
-	Frame tempScrew4("screwPose4",screw4Pose);
+	name.push_back("screwPose");
+	name.push_back("screwPose4");
+	Frame tempScrew4(name,screw4Pose);
 	objectFrames.push_back(tempScrew4);
+	name.clear();
+
+	name.push_back("approachScrewPose");
+	name.push_back("approachScrewPose1");
+	Frame tempApproachScrew1(name,approachScrew1Pose);
+	objectFrames.push_back(tempApproachScrew1);
+	name.clear();
+
+	name.push_back("approachScrewPose");
+	name.push_back("approachScrewPose2");
+	Frame tempApproachScrew2(name,approachScrew2Pose);
+	objectFrames.push_back(tempApproachScrew2);
+	name.clear();
+
+	name.push_back("approachScrewPose");
+	name.push_back("approachScrewPose3");
+	Frame tempApproachScrew3(name,approachScrew3Pose);
+	objectFrames.push_back(tempApproachScrew3);
+	name.clear();
+
+	name.push_back("approachScrewPose");
+	name.push_back("approachScrewPose4");
+	Frame tempApproachScrew4(name,approachScrew4Pose);
+	objectFrames.push_back(tempApproachScrew4);
+	name.clear();
 
 }
 

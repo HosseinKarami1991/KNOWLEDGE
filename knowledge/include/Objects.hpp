@@ -40,21 +40,22 @@ namespace pittObjects {
 
 class Frame{
 public:
-	string name;
+	vector<string> name;
 	float frame[6];
 	Frame(){
-		name="";
 		for(int i=0;i<6;i++)
 			frame[i]=0.0;
 	}
-	Frame(string Name, float *Frame){
+	Frame(vector<string> Name, float *Frame){
 		name=Name;
 		for(int i=0;i<6;i++)
 			frame[i]=Frame[i];
 	}
 	~Frame(){}
 	void Print(void) const{
-		cout<<name<<": ";
+		for(int i=0;i<name.size();i++)
+			cout<<name[i]<<" ";
+		cout<<": ";
 		for(int i=0;i<6;i++)
 			cout<<frame[i]<<" ";
 		cout<<endl;

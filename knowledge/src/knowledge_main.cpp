@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	worldVec[left_q_index].name.push_back("LeftArm_q");
 	worldVec[right_q_index].name.push_back("RightArm_q");
 	worldVec[left_q_index].name.push_back("Pose");
-	worldVec[right_q_index].name.push_back("pose");
+	worldVec[right_q_index].name.push_back("Pose");
 
 
 	cout<<"left_q_index: "<<left_q_index<<"right_q_index: "<<right_q_index<<endl;
@@ -276,7 +276,9 @@ void CallBackShapes(const TrackedShapes& outShapes){
 					World instance;
 					instance.name.push_back(objectsVector[i]->objType);
 					instance.name.push_back(objectsVector[i]->objName);
-					instance.name.push_back(objectsVector[i]->objectFrames[j].name);
+					for(int k=0;k<objectsVector[i]->objectFrames[j].name.size();k++)
+						instance.name.push_back(objectsVector[i]->objectFrames[j].name[k]);
+
 					for(int m=0;m<6;m++)
 					instance.value.push_back(objectsVector[i]->objectFrames[j].frame[m]);
 					worldVec.push_back(instance);
