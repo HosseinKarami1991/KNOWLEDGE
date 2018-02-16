@@ -10,6 +10,9 @@
 #include <knowledge_msgs/knowledgeSRV.h>
 #include <boost/algorithm/string.hpp>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/String.h>
+#include "controlCommnad_msgs/controlGoalReachAck.h"
+
 
 #define RST  "\x1B[0m"
 #define KBLU  "\x1B[34m"
@@ -31,25 +34,34 @@ vector<shared_ptr<pittObjects::Objects>> objectsVector;
 
 vector<World> worldVec;
 int left_q_index,right_q_index;
+int kb_update_arm , kb_update_counter=0;
 
-int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=0, NumberCylinder=4, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
-float perception_regionOperating[6];
+float perception_regionOperating[6], reduction_WS[6];
 
 // functions Def:
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg);
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg);
+void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg);
+
 void CallBackShapes(const TrackedShapes& outShapes);
 
-bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter);
+bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter, float* WS);
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
 
+ros::Publisher	pub_KBAck;
 int main(int argc, char **argv)
 {
 
 	perception_regionOperating[0]=0.45;	perception_regionOperating[1]=-0.01;	perception_regionOperating[2]=0.045;	//! center
 	perception_regionOperating[3]=0.99;	perception_regionOperating[4]=0.99;		perception_regionOperating[5]=0.60;		//! size
+
+	reduction_WS[0]=0.0;	reduction_WS[1]=0.0;	reduction_WS[2]=0.045;	//! center
+	reduction_WS[3]=0.0;	reduction_WS[4]=0.0;	reduction_WS[5]=0.60;		//! size
+
+
 
 
 	ros::init(argc, argv, "knowledge");
@@ -58,6 +70,9 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_shapes =nh.subscribe("ransac_segmentation/trackedShapes",10, CallBackShapes);
 	ros::Subscriber sub_LeftQ  =nh.subscribe("Q_leftArm" ,10, CallBackJointValues_LeftArm);
 	ros::Subscriber sub_RightQ =nh.subscribe("Q_rightArm",10, CallBackJointValues_RightArm);
+	ros::Subscriber sub_UpdateKB =nh.subscribe("robot_KB_command",10, CallBackUpdateKB);
+	pub_KBAck=nh.advertise<controlCommnad_msgs::controlGoalReachAck>("robot_control_ack",80);;
+
 
 	const char* home=getenv("HOME");
 	string pointPath(home);
@@ -129,11 +144,11 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 		{
 			for(int k=0;k<typeVec.size();k++) // cylinder1 graspingPose1
 			{
-//				cout<<"worldVec["<<i<<"].name["<<j<<"]: "<<worldVec[i].name[j]<<", typeVec["<<k<<"]: "<<typeVec[k]<<endl;
+				//				cout<<"worldVec["<<i<<"].name["<<j<<"]: "<<worldVec[i].name[j]<<", typeVec["<<k<<"]: "<<typeVec[k]<<endl;
 				if(worldVec[i].name[j]==typeVec[k])
 				{
 					Occurence++;
-//					cout<<Occurence<<endl;
+					//					cout<<Occurence<<endl;
 				}
 			}
 			if(Occurence==typeVec.size() && worldVec[i].name.back().find(requestInfoVec[0]) != std::string::npos)
@@ -174,7 +189,7 @@ void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
 		leftQ.push_back(msg.data[i]);
 	worldVec[left_q_index].value=leftQ;
 
-//	worldVec[left_q_index].Print();
+	//	worldVec[left_q_index].Print();
 
 };
 
@@ -185,13 +200,15 @@ void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg){
 
 	worldVec[right_q_index].value=rightQ;
 
-//	worldVec[right_q_index].Print();
+	//	worldVec[right_q_index].Print();
 
 };
 
 //********************************************************************************
 //********************************************************************************
 void CallBackShapes(const TrackedShapes& outShapes){
+	//	cout<<FGRN(BOLD("CallBackShapes"))<<endl;
+
 	TrackedShape::Ptr outShape ( new TrackedShape);
 	string obj_name;
 
@@ -207,7 +224,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			float objectCenter[]={outShapes.tracked_shapes[i].x_pc_centroid, outShapes.tracked_shapes[i].y_pc_centroid,outShapes.tracked_shapes[i].z_pc_centroid};
 			string objectName=outShapes.tracked_shapes[i].shape_tag;
 
-			if(IsPerceivedObjectInsideWS(objectName,objectCenter))
+			if(IsPerceivedObjectInsideWS(objectName,objectCenter,perception_regionOperating) && !IsPerceivedObjectInsideWS(objectName,objectCenter,reduction_WS) )
 			{
 				int objID=outShapes.tracked_shapes[i].object_id;
 				TrackedShape tracked_Shape=outShapes.tracked_shapes[i];
@@ -280,7 +297,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 						instance.name.push_back(objectsVector[i]->objectFrames[j].name[k]);
 
 					for(int m=0;m<6;m++)
-					instance.value.push_back(objectsVector[i]->objectFrames[j].frame[m]);
+						instance.value.push_back(objectsVector[i]->objectFrames[j].frame[m]);
 					worldVec.push_back(instance);
 				}
 			}
@@ -289,169 +306,108 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			for(int i=0;i<worldVec.size();i++)
 				worldVec[i].Print();
 
+			controlCommnad_msgs::controlGoalReachAck ackMsg;
+			ackMsg.armState=kb_update_arm;
+			ackMsg.ctrlCmndTypeAck=0;
+			pub_KBAck.publish(ackMsg);
+
 			obj_call_back_flag=false;
+
+
 		}
 	}
 
 };
 
 
+void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Reduce_cylinder 0 ...
 
+	cout<<FRED(BOLD("CallBackUpdateKB"))<<endl;
+	string Msg=msg->data.c_str();
+	cout<<"arriving msg: "<<Msg<<endl;
 
+	cout<<"NumberCone :"<<NumberCone <<endl;
+	cout<<"NumberCylinder :"<<NumberCylinder<<endl;
+	cout<<"NumberPlane :"<<NumberPlane <<endl;
+	cout<<"NumberSphere :"<<NumberSphere <<endl;
+	cout<<"NumberUnknown :"<<NumberUnknown <<endl;
+	cout<<"WS: "<<reduction_WS[0]<<" "<<reduction_WS[1]<<" "<<reduction_WS[2]<<" "<<reduction_WS[3]<<" "<<reduction_WS[4]<<" "<<reduction_WS[5]<<endl;
 
-//	knowledge_msgs::Region region;
-//	geometry_msgs::Vector3 PoseLinear,PoseAngular;
+	vector<string> msgvector, actionVector, actionParameter;
+	boost::split(msgvector, Msg, boost::is_any_of(" "));
+	kb_update_arm=stoi(msgvector[1]);
 
-//
+	//	boost::split(actionVector, msgvector[0], boost::is_any_of("_"));
+	if(kb_update_counter==0)
+	{
+		//		boost::split(actionParameter, actionVector[1], boost::is_any_of("-"));
+		//		if(actionParameter[0]=="WS")
+		//		{
+		NumberPlane--;
 
-//	if(type.find("plane") != std::string::npos || type.find("cylinder") != std::string::npos || type.find("sphere") != std::string::npos)
-//	{
-//		if(requestInfo=="Pose")
-//		{
-//			for(int i=0;i<objectsVector.size();i++)
-//			{
-//				cout<< type<<":"<<objectsVector[i]->objName<<endl;
-//				if(type==objectsVector[i]->objName)
-//				{
-//					for(int j=0;j<objectsVector[i]->objectFrames.size();j++)
-//					{
-//						cout<< name<<":"<<objectsVector[i]->objectFrames[j].name<<endl;
-//						if(name==objectsVector[i]->objectFrames[j].name)
-//						{
-//							for(int k=0;k<6;k++)
-//							{
-//								res.pose.push_back(objectsVector[i]->objectFrames[j].frame[k]);
-//							}
-//							break;
-//						}
-//
-//					}
-//
-//					break;
-//				}
-//				else
-//				{
-//					cout<<"Object with name: "<<type<<" is not found in Knowledge base"<<endl;
-//				}
-//			}
-//		}
-//		else if(requestInfo=="boundingBox")
-//		{
-//			for(int i=0;i<objectsVector.size();i++)
-//			{
-//				float boundingBox[6];
-//				//				objectsVector[i]->BoundingBox(boundingBox);
-//
-//				for(int j=0;j<6;j++)
-//				{
-//					region.data.push_back(boundingBox[j]);
-//				}
-//				res.region.push_back(region);
-//			}
-//		}
-//		else if(requestInfo=="boundingSphere")
-//		{
-//			for(int i=0;i<objectsVector.size();i++)
-//			{
-//				float boundingBall[4];
-//				//				objectsVector[i]->BoundingBall(boundingBall);
-//
-//				for(int j=0;j<6;j++)
-//				{
-//					if(j<4)
-//						region.data.push_back(boundingBall[j]);
-//					else
-//						region.data.push_back(0.0);
-//				}
-//				res.region.push_back(region);
-//			}
-//		}
-//		else
-//		{
-//			cout<<"The request info is wrong: "<<requestInfo <<endl;
-//		}
-//	}
-//	else if(type.find("Point") != std::string::npos)
-//	{
-//
-//		for(int i=0;i<pointsVector.size();i++)
-//		{
-//			if(type==pointsVector[i].name)
-//			{
-//				for(int j=0;j<pointsVector[i].pose.size();j++)
-//				{
-//					res.pose.push_back(pointsVector[i].pose[j]);
-//				}
-//				cout<<pointsVector[i].name<<" ";
-//				for(int j=0;j<pointsVector[i].pose.size();j++)
-//					cout<<pointsVector[i].pose[j]<<" ";
-//				cout<<endl;
-//				break;
-//			}
-//
-//		}
-//	}
-//	else if(type.find("JointValues") != std::string::npos)
-//	{
-//		string delim_type="+";
-//		vector<string> agents_vector;
-//		boost::split(agents_vector, requestInfo, boost::is_any_of(delim_type));
-//		for(int i=0;i<agents_vector.size();i++)
-//		{
-//			region.data.clear();
-//			if(agents_vector[i]=="LeftArm")
-//				for(int j=0;j<7;j++)
-//					region.data.push_back(EE_value[0][j]);
-//
-//			else if(agents_vector[i]=="RightArm")
-//				for(int j=0;j<7;j++)
-//					region.data.push_back(EE_value[1][j]);
-//
-//			else
-//				cout<<"Error in incoming msg: "<<agents_vector[i]<<endl;
-//
-//			res.region.push_back(region);
-//		}
-//
-//		cout<<"left Arm q: ";
-//		for (int i=0;i<res.region[0].data.size();i++)
-//			cout<<res.region[0].data[i]<<" ";
-//		cout<<endl;
-//		cout<<"right Arm q: ";
-//		for (int i=0;i<res.region[1].data.size();i++)
-//			cout<<res.region[1].data[i]<<" ";
-//		cout<<endl;
-//
-//
-//
-//	}
+		knowledge_msgs::knowledgeSRV::Request request;
+		knowledge_msgs::knowledgeSRV::Response response;
+		request.reqType="plane1-centerFramePose";
+		request.requestInfo="Pose";
+		KnowledgeQuery(request,response);
+
+		reduction_WS[0]= response.pose[3];
+		reduction_WS[1]= response.pose[4];
+		reduction_WS[3]=0.40;
+		reduction_WS[4]=0.50;
+	}
+	//		else if(actionParameter[0]=="cylinder")
+	else
+	{
+		NumberCylinder--;
+	}
+
+	for(vector<World>::iterator it=worldVec.begin(); it!=worldVec.end(); )
+		if(it->name[0]=="cylinder")
+			worldVec.erase(it);
+		else
+			it++;
+
+	obj_call_back_flag=true;
+//}
 //	else
 //	{
-//		cout<<"Request type is wrong:"<<type<<endl;
+//		cout<<"Error in arriving msg: "<<msgvector[0]<<endl;
 //	}
 
 
 
-bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter){
+cout<<"NumberCone :"<<NumberCone <<endl;
+cout<<"NumberCylinder :"<<NumberCylinder<<endl;
+cout<<"NumberPlane :"<<NumberPlane <<endl;
+cout<<"NumberSphere :"<<NumberSphere <<endl;
+cout<<"NumberUnknown :"<<NumberUnknown <<endl;
+cout<<"WS: "<<reduction_WS[0]<<" "<<reduction_WS[1]<<" "<<reduction_WS[2]<<" "<<reduction_WS[3]<<" "<<reduction_WS[4]<<" "<<reduction_WS[5]<<endl;
+
+kb_update_counter++;
+
+};
+
+
+
+bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter, float* WS){
 	bool isObjectInWS=true;
-	float perception_regionOperating[6];
-	perception_regionOperating[0]=0.45;	perception_regionOperating[1]=-0.01;	perception_regionOperating[2]=0.045;	//! center
-	perception_regionOperating[3]=0.99;	perception_regionOperating[4]=0.99;		perception_regionOperating[5]=0.60;		//! size
+	//	float WS[6];
+	//	WS[0]=0.45;	WS[1]=-0.01;	WS[2]=0.045;	//! center
+	//	WS[3]=0.99;	WS[4]=0.99;		WS[5]=0.60;		//! size
 
-	if( 	ObjectCenter[0]> (perception_regionOperating[0]+perception_regionOperating[3]/2.0) ||
-			ObjectCenter[0]< (perception_regionOperating[0]-perception_regionOperating[3]/2.0) ||
 
-			ObjectCenter[1]> (perception_regionOperating[1]+perception_regionOperating[4]/2.0) ||
-			ObjectCenter[1]< (perception_regionOperating[1]-perception_regionOperating[4]/2.0) ||
+	if( 	ObjectCenter[0]> (WS[0]+WS[3]/2.0) ||	ObjectCenter[0]< (WS[0]-WS[3]/2.0) ||
 
-			ObjectCenter[2]> (perception_regionOperating[2]+perception_regionOperating[5]/2.0) ||
-			ObjectCenter[2]< (perception_regionOperating[2]-perception_regionOperating[5]/2.0) )
+			ObjectCenter[1]> (WS[1]+WS[4]/2.0) ||	ObjectCenter[1]< (WS[1]-WS[4]/2.0) ||
+
+			ObjectCenter[2]> (WS[2]+WS[5]/2.0) ||	ObjectCenter[2]< (WS[2]-WS[5]/2.0) )
 	{
 		isObjectInWS=false;
 		cout<<ObjectName<<" is Out of perception working space"<<endl;
-		cout<<" X: object center:"<<ObjectCenter[0]<< ", Min WS: "<< perception_regionOperating[0]-perception_regionOperating[3]/2.0<<", Max WS: "<<perception_regionOperating[0]+perception_regionOperating[3]/2.0<<endl;
-		cout<<" Y: object center:"<<ObjectCenter[1]<< ", Min WS: "<< perception_regionOperating[1]-perception_regionOperating[4]/2.0<<", Max WS: "<<perception_regionOperating[1]+perception_regionOperating[4]/2.0<<endl;
-		cout<<" Z: object center:"<<ObjectCenter[2]<< ", Min WS: "<< perception_regionOperating[2]-perception_regionOperating[5]/2.0<<", Max WS: "<<perception_regionOperating[2]+perception_regionOperating[5]/2.0<<endl;
+		cout<<" X: object center:"<<ObjectCenter[0]<< ", Min WS: "<< WS[0]-WS[3]/2.0<<", Max WS: "<<WS[0]+WS[3]/2.0<<endl;
+		cout<<" Y: object center:"<<ObjectCenter[1]<< ", Min WS: "<< WS[1]-WS[4]/2.0<<", Max WS: "<<WS[1]+WS[4]/2.0<<endl;
+		cout<<" Z: object center:"<<ObjectCenter[2]<< ", Min WS: "<< WS[2]-WS[5]/2.0<<", Max WS: "<<WS[2]+WS[5]/2.0<<endl;
 
 	}
 
