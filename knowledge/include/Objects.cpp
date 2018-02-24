@@ -790,7 +790,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	objectFrames.push_back(tempap2);
 	name.clear();
 
-	name.push_back("approachingPose2");
+	name.push_back("graspingPose2");
 	Frame tempgp2(name,graspPose2);
 	objectFrames.push_back(tempgp2);
 	name.clear();
