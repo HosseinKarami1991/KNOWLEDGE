@@ -36,7 +36,7 @@ vector<World> worldVec;
 int left_q_index,right_q_index;
 int kb_update_arm , kb_update_counter=0;
 
-int NumberSphere=0, NumberCylinder=4, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6], reduction_WS[6];
@@ -339,6 +339,15 @@ void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Redu
 
 	//	boost::split(actionVector, msgvector[0], boost::is_any_of("_"));
 	if(kb_update_counter==0)
+	{
+
+		for(vector<World>::iterator it=worldVec.begin(); it!=worldVec.end(); )
+			if(it->name[0]=="cylinder" ||it->name[0]=="plane" )
+				worldVec.erase(it);
+			else
+				it++;
+	}
+	else if(kb_update_counter==1)
 	{
 		//		boost::split(actionParameter, actionVector[1], boost::is_any_of("-"));
 		//		if(actionParameter[0]=="WS")
