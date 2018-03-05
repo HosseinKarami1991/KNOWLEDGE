@@ -136,7 +136,6 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 		cout<<"return values"<<endl;
 	}
 
-
 	for(int i=0;i<worldVec.size();i++)
 	{
 		int Occurence=0;
@@ -276,7 +275,8 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			objectsVector[i]->Print();
 		cout<<"+++++++++++++++++++++++++++++++"<<endl;
 
-		if(perceivedNoCone==NumberCone && perceivedNoCylinder==NumberCylinder && perceivedNoPlane==NumberPlane && perceivedNoSphere==NumberSphere && perceivedNoUnknown==NumberUnknown)
+		if((perceivedNoCone==NumberCone && perceivedNoCylinder==NumberCylinder && perceivedNoPlane==NumberPlane && perceivedNoSphere==NumberSphere && perceivedNoUnknown==NumberUnknown)||
+				(kb_update_counter==0 && perceivedNoPlane==NumberPlane ))
 		{
 			for (int i=0;i<objectsVector.size();i++)
 			{

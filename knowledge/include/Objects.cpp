@@ -514,11 +514,11 @@ void pittObjects::Plane::BoundingBall(void){
 void pittObjects::Plane::GraspingPosition(void){
 	cout<<"Plane::GraspingPosition"<<endl;
 
-	cout<<"Z        r            r          "<<endl;
+	cout<<"Z (Y)    r            r          "<<endl;
 	cout<<"^     p4 ^  --------- ^ p2       "<<endl;
 	cout<<"|        | |--> b <--||          "<<endl;
 	cout<<"|     p3    ---------   p1         "<<endl;
-	cout<<" ----> Y                         "<<endl;
+	cout<<" ----> Y (X)                         "<<endl;
 
 	/*!
 		1- find the two point on the left for the left arm, and the two point on the right for the right arm
