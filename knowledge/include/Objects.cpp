@@ -582,6 +582,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	}
 	else if(planeCoef[2]<-0.9)
 	{index1=0, index2=1, index3=2;}
+
 	cout<<"plane coef: "<<planeCoef[0]<<" "<<planeCoef[1]<<" "<<planeCoef[2]<<" "<<planeCoef[3]<<" "<<endl;
 
 
