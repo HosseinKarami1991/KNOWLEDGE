@@ -36,7 +36,7 @@ vector<World> worldVec;
 int left_q_index,right_q_index;
 int kb_update_arm , kb_update_counter=0;
 
-int NumberSphere=0, NumberCylinder=1, NumberUnknown=0, NumberCone=0,NumberPlane=1;
+int NumberSphere=0, NumberCylinder=4, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
 bool obj_call_back_flag=true;
 float perception_regionOperating[6], reduction_WS[6];
