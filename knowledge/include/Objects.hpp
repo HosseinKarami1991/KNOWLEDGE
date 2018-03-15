@@ -38,6 +38,24 @@ using namespace std;
 
 namespace pittObjects {
 
+
+bool CheckPoints(vector<float> &point, vector<float> &center, double RectangleThreshold){
+// if the point is inside a bounding ball of the center we consider it as a real inlier
+	cout<<"CheckPoints()"<<endl;
+	cout<<"found: "<<point[0]<< " "<<point[1]<< " "<<point[2]<< " "<<endl;
+	cout<<"old: "<<center[0]<< " "<<center[1]<< " "<<center[2]<< " "<<endl;
+
+	double distance=(point[0]-center[0])*(point[0]-center[0]) +
+					(point[1]-center[1])*(point[1]-center[1]) +
+					(point[2]-center[2])*(point[2]-center[2]);
+
+	cout<<"distance: "<<distance<<endl;
+	if(distance<=RectangleThreshold)
+		return true;
+	else
+		return false;
+};
+
 class Frame{
 public:
 	vector<string> name;
@@ -207,7 +225,7 @@ public:
 
 	virtual void BoundingBox(void){};
 	virtual void BoundingBall(void){};
-	virtual void GraspingPosition(void){};//! Define the grasping and approaching position for robot
+	virtual bool GraspingPosition(void){};//! Define the grasping and approaching position for robot
 	virtual void FrameSet(void){};
 };
 // =======================================
@@ -224,7 +242,7 @@ public:
 	}
 	void BoundingBox(void);
 	void BoundingBall(void);
-	void GraspingPosition(void);
+	bool GraspingPosition(void);
 	void FrameSet(void);
 };
 
@@ -242,7 +260,7 @@ public:
 	}
 	void BoundingBox(void);
 	void BoundingBall(void);
-	void GraspingPosition(void);
+	bool GraspingPosition(void);
 	void FrameSet(void);
 //	INFO:
 //	coefficients: [Point A, Norm of Axis of Cylinder,Radius,Height]
@@ -269,7 +287,7 @@ public:
 	}
 	void BoundingBox(void);
 	void BoundingBall(void);
-	void GraspingPosition(void);
+	bool GraspingPosition(void);
 	void FrameSet(void);
 };
 // =======================================
@@ -286,7 +304,7 @@ public:
 	}
 	void BoundingBox(void);
 	void BoundingBall(void);
-	void GraspingPosition(void);
+	bool GraspingPosition(void);
 	void FrameSet(void);
 };
 // =======================================
@@ -302,7 +320,7 @@ public:
 	}
 	void BoundingBox(void);
 	void BoundingBall(void);
-	void GraspingPosition(void);
+	bool GraspingPosition(void);
 	void FrameSet(void);
 };
 // =======================================

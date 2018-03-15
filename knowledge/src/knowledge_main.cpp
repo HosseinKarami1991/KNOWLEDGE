@@ -280,8 +280,11 @@ void CallBackShapes(const TrackedShapes& outShapes){
 		{
 			for (int i=0;i<objectsVector.size();i++)
 			{
+				bool graspingPose;
 				objectsVector[i]->FrameSet();
-				objectsVector[i]->GraspingPosition();
+				graspingPose=objectsVector[i]->GraspingPosition();
+				if(graspingPose==false) // if the rectangle vertices are not theoretically well found!
+					return;
 			}
 
 			cout<<BOLD("********** Object Vector *************")<<endl;

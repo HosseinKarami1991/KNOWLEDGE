@@ -26,7 +26,7 @@ void pittObjects::Sphere::BoundingBall(void){
 	boundingBall[3]=trackedShape.coefficients[3]*2.0*obstacleSafetyFactor;//! size_x,
 }
 
-void pittObjects::Sphere::GraspingPosition(void){
+bool pittObjects::Sphere::GraspingPosition(void){
 	cout<<"Sphere::GraspingPosition"<<endl;
 	/*! Grasping Pose is computed from top of the sphere considering
 	 * x axis object = x axis gripper ~ PI (3.14) : Roll
@@ -90,6 +90,7 @@ void pittObjects::Sphere::GraspingPosition(void){
 	Frame tempApproachingFrame(name,approachingPose);
 	objectFrames.push_back(tempApproachingFrame);
 	name.clear();
+	return true;
 }
 
 void pittObjects::Sphere::FrameSet(void){
@@ -157,7 +158,7 @@ void pittObjects::Cylinder::BoundingBall(void){
 
 }
 
-void pittObjects::Cylinder::GraspingPosition(void){
+bool pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"Cylinder::GraspingPosition"<<endl;
 
 	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6];
@@ -406,6 +407,7 @@ void pittObjects::Cylinder::GraspingPosition(void){
 	objectFrames.push_back(temp_centerFrame);
 	name.clear();
 
+	return true;
 
 }
 
@@ -489,10 +491,10 @@ void pittObjects::Cone::BoundingBall(void){
 	cout<<"Cone::BoundingBall"<<endl;
 }
 
-void pittObjects::Cone::GraspingPosition(void){
+bool pittObjects::Cone::GraspingPosition(void){
 	cout<<"Cone::GraspingPosition"<<endl;
 	float graspPose[6]; float approachingPose[6];
-
+	return true;
 }
 
 void pittObjects::Cone::FrameSet(void){
@@ -511,7 +513,7 @@ void pittObjects::Plane::BoundingBall(void){
 	cout<<"Plane::BoundingBall"<<endl;
 }
 
-void pittObjects::Plane::GraspingPosition(void){
+bool pittObjects::Plane::GraspingPosition(void){
 	cout<<"Plane::GraspingPosition"<<endl;
 
 	cout<<"Z (Y)    r            r          "<<endl;
@@ -529,8 +531,14 @@ void pittObjects::Plane::GraspingPosition(void){
 		6- add the found frames to the frame vector
 	 */
 
+	// vertices 1 and 3 are in front of each other. vertices 2 and 4 are in front of each other.
+
 	float GRASPING_DIS=0.05;// 5 cm from the plate border the grasping pose and the approaching pose
 	float PLANE_THICKNESS=0.02;
+	//rectangle threshold
+	double RecThreshold=0.05;
+
+
 
 	vector<vector<float>> verticesOld, vertices;
 	vector<float> vertex, center, planeCoef;
@@ -558,6 +566,52 @@ void pittObjects::Plane::GraspingPosition(void){
 	vertex.push_back(trackedShape.coefficients[15]);
 	verticesOld.push_back(vertex);
 	vertex.clear();
+
+	///////////////////////////////////////////////
+	///////////////////////////////////////////////
+	// check if at least three points are theoretically can make a rectangle, if not return false;
+	vector<float> foundVertex;foundVertex.resize(3,0.0);
+	vector<vector<float>> foundVertices;foundVertices.resize(4,foundVertex);
+
+
+	for(int i=0;i<3;i++)
+	{
+		foundVertices[1][i]=verticesOld[0][i]+(verticesOld[2][i]-verticesOld[3][i]); // point 2
+		foundVertices[2][i]=verticesOld[1][i]+(verticesOld[3][i]-verticesOld[0][i]); // point 3
+		foundVertices[3][i]=verticesOld[2][i]+(verticesOld[0][i]-verticesOld[1][i]); // point 4
+		foundVertices[0][i]=verticesOld[3][i]+(verticesOld[1][i]-verticesOld[2][i]); // point 1
+	}
+
+	vector<int>RectangleIndices;
+	for(int i=0;i<4;i++)
+	{
+		bool closeness=CheckPoints(foundVertices[i],verticesOld[i], RecThreshold);
+		if(closeness==false)
+		{
+			RectangleIndices.push_back(i);
+		}
+	}
+
+	cout<<"RectangleIndices.size():"<<RectangleIndices.size()<<endl;
+	if(RectangleIndices.size()==0)
+	{}
+	else if(RectangleIndices.size()==1)
+	{
+		cout<<"vertex replacement"<<endl;
+		cout<<"old: "<<RectangleIndices[0]<<": "<<verticesOld[RectangleIndices[0]][0]<<" "<<verticesOld[RectangleIndices[0]][1]<<" "<<verticesOld[RectangleIndices[0]][2]<<endl;
+		cout<<"new: "<<RectangleIndices[0]<<": "<<foundVertices[RectangleIndices[0]][0]<<" "<<foundVertices[RectangleIndices[0]][1]<<" "<<foundVertices[RectangleIndices[0]][2]<<endl;
+		verticesOld[RectangleIndices[0]]=foundVertices[RectangleIndices[0]];
+
+
+	}
+	else
+	{
+		return false;
+	}
+
+	///////////////////////////////////////////////
+	///////////////////////////////////////////////
+
 
 	center.push_back(trackedShape.x_pc_centroid);//x
 	center.push_back(trackedShape.y_pc_centroid);//y
@@ -940,7 +994,7 @@ void pittObjects::Plane::GraspingPosition(void){
 	Frame tempApproachScrew4(name,approachScrew4Pose);
 	objectFrames.push_back(tempApproachScrew4);
 	name.clear();
-
+	return true;
 }
 
 void pittObjects::Plane::FrameSet(void){
@@ -987,9 +1041,9 @@ void pittObjects::Unknown::BoundingBall(void){
 
 }
 
-void pittObjects::Unknown::GraspingPosition(void){
+bool pittObjects::Unknown::GraspingPosition(void){
 	cout<<"Unknown::GraspingPosition"<<endl;
-
+	return true;
 }
 void pittObjects::Unknown::FrameSet(void){
 	cout<<"Unknown::FrameSet"<<endl;
