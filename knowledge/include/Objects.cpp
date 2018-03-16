@@ -161,8 +161,8 @@ void pittObjects::Cylinder::BoundingBall(void){
 bool pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"Cylinder::GraspingPosition"<<endl;
 
-	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6];
-
+	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6], objFrameFirstGoal[6];
+	float FirstGoalDistance=0.05;// the first goal of the moving cylinder in order to collide with the plate
 
 	Eigen::Vector3f Vec_ObjFr2GraspFr, vec_Grasping; //YPR
 	Eigen::Matrix3f Rot_Obj2Grasp, Rot_Grasping,RotMat;
@@ -196,7 +196,9 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 
 
 	radius= trackedShape.coefficients[6];
-	height= trackedShape.coefficients[7];
+//	height= trackedShape.coefficients[7];
+	height= 0.25;
+
 	normalAxis[0]=trackedShape.coefficients[3];
 	normalAxis[1]=trackedShape.coefficients[4];
 	normalAxis[2]=trackedShape.coefficients[5];
@@ -252,6 +254,14 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 		objFrameScrewingPose[3]=objFrame[3]-normalAxis[0]*height/2.0;
 		objFrameScrewingPose[4]=objFrame[4]-normalAxis[1]*height/2.0;
 		objFrameScrewingPose[5]=objFrame[5]-normalAxis[2]*height/2.0;
+
+		objFrameFirstGoal[0]=graspPose[0]; //Y
+		objFrameFirstGoal[1]=graspPose[1];// P
+		objFrameFirstGoal[2]=graspPose[2];// R
+		objFrameFirstGoal[3]=objFrame[3]-normalAxis[0]*(height/2.0-FirstGoalDistance);
+		objFrameFirstGoal[4]=objFrame[4]-normalAxis[1]*(height/2.0-FirstGoalDistance);
+		objFrameFirstGoal[5]=objFrame[5]-normalAxis[2]*(height/2.0-FirstGoalDistance);
+
 	}
 
 	else
@@ -323,6 +333,14 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 		objFrameScrewingPose[3]=objFrame[3]+RotMat(0,0)*height/2.0;
 		objFrameScrewingPose[4]=objFrame[4]+RotMat(1,0)*height/2.0;
 		objFrameScrewingPose[5]=objFrame[5]+RotMat(2,0)*height/2.0;
+
+		objFrameFirstGoal[0]=graspPose[0]; //Y
+		objFrameFirstGoal[1]=graspPose[1];// P
+		objFrameFirstGoal[2]=graspPose[2];// R
+		objFrameFirstGoal[3]=objFrame[3]-normalAxis[0]*(height/2.0-FirstGoalDistance);
+		objFrameFirstGoal[4]=objFrame[4]-normalAxis[1]*(height/2.0-FirstGoalDistance);
+		objFrameFirstGoal[5]=objFrame[5]-normalAxis[2]*(height/2.0-FirstGoalDistance);
+
 	}
 
 
@@ -340,9 +358,15 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 	Frame temp_screwFrame(name,objFrameScrewingPose);
 	name.clear();
 
+	name.push_back("FirstGoalFramePose");
+	Frame temp_FirstGoal(name,objFrameFirstGoal);
+	name.clear();
+
 	objectFrames.push_back(temp_graspingFrame);
 	objectFrames.push_back(temp_approachingFrame);
 	objectFrames.push_back(temp_screwFrame);
+	objectFrames.push_back(temp_FirstGoal);
+
 
 
 	//**********************************************
@@ -871,10 +895,10 @@ bool pittObjects::Plane::GraspingPosition(void){
 
 	approachScrew1=screw1; approachScrew2=screw2; approachScrew3=screw3; approachScrew4=screw4;
 
-	approachScrew1=approachScrew1-3.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew2=approachScrew2-3.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew3=approachScrew3-3.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew4=approachScrew4-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew1=approachScrew1-2.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew2=approachScrew2-2.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew3=approachScrew3-2.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew4=approachScrew4-2.0*SCREW_LENGTH* Y1_grasp;
 
 	Eigen::Vector3f screw1Euler, screw2Euler, screw3Euler, screw4Euler; // Pi,0,PI
 

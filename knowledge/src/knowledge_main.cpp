@@ -356,6 +356,7 @@ void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Redu
 		//		if(actionParameter[0]=="WS")
 		//		{
 		NumberPlane--;
+		NumberCylinder--;
 
 		knowledge_msgs::knowledgeSRV::Request request;
 		knowledge_msgs::knowledgeSRV::Response response;
