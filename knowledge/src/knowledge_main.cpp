@@ -360,14 +360,64 @@ void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Redu
 
 		knowledge_msgs::knowledgeSRV::Request request;
 		knowledge_msgs::knowledgeSRV::Response response;
-		request.reqType="plane1-centerFramePose";
+		float planeVertx[3];
+		float maxX=-10000.0,minX=10000.0, maxY=-100000.0, minY=100000.0;
+
+		request.reqType="plane1-VertexPose1";
 		request.requestInfo="Pose";
 		KnowledgeQuery(request,response);
 
-		reduction_WS[0]= response.pose[3];
-		reduction_WS[1]= response.pose[4];
-		reduction_WS[3]=0.40;
-		reduction_WS[4]=0.50;
+		planeVertx[0]= response.pose[3]; planeVertx[1]= response.pose[4]; planeVertx[2]= response.pose[5];
+//		cout<<"1 planeVertx:"<<planeVertx[0]<<","<<planeVertx[1]<<","<<planeVertx[2]<<endl;
+//		cout<<"1  max x"<<maxX<<", min x: "<<minX<<", max y: "<<maxY<<", min y: "<<minY<<endl;
+		if(planeVertx[0]>maxX){ 	maxX=planeVertx[0]; }
+		if(planeVertx[0]<minX){ 	minX=planeVertx[0]; }
+		if(planeVertx[1]>maxY){ 	maxY=planeVertx[1]; }
+		if(planeVertx[1]<minY){		minY=planeVertx[1]; }
+
+		response.pose.clear();
+		request.reqType="plane1-VertexPose2";
+		request.requestInfo="Pose";
+		KnowledgeQuery(request,response);
+		planeVertx[0]= response.pose[3]; planeVertx[1]= response.pose[4]; planeVertx[2]= response.pose[5];
+
+//		cout<<"2 planeVertx:"<<planeVertx[0]<<","<<planeVertx[1]<<","<<planeVertx[2]<<endl;
+//		cout<<"2 max x"<<maxX<<", min x: "<<minX<<", max y: "<<maxY<<", min y: "<<minY<<endl;
+		if(planeVertx[0]>maxX){ 	maxX=planeVertx[0]; }
+		if(planeVertx[0]<minX){ 	minX=planeVertx[0]; }
+		if(planeVertx[1]>maxY){ 	maxY=planeVertx[1]; }
+		if(planeVertx[1]<minY){		minY=planeVertx[1]; }
+
+		response.pose.clear();
+		request.reqType="plane1-VertexPose3";
+		request.requestInfo="Pose";
+		KnowledgeQuery(request,response);
+		planeVertx[0]= response.pose[3]; planeVertx[1]= response.pose[4]; planeVertx[2]= response.pose[5];
+//		cout<<"3 planeVertx:"<<planeVertx[0]<<","<<planeVertx[1]<<","<<planeVertx[2]<<endl;
+//		cout<<"3 max x"<<maxX<<", min x: "<<minX<<", max y: "<<maxY<<", min y: "<<minY<<endl;
+		if(planeVertx[0]>maxX){ 	maxX=planeVertx[0]; }
+		if(planeVertx[0]<minX){ 	minX=planeVertx[0]; }
+		if(planeVertx[1]>maxY){ 	maxY=planeVertx[1]; }
+		if(planeVertx[1]<minY){		minY=planeVertx[1]; }
+
+		response.pose.clear();
+		request.reqType="plane1-VertexPose4";
+		request.requestInfo="Pose";
+		KnowledgeQuery(request,response);
+		planeVertx[0]= response.pose[3]; planeVertx[1]= response.pose[4]; planeVertx[2]= response.pose[5];
+//		cout<<"4 planeVertx:"<<planeVertx[0]<<","<<planeVertx[1]<<","<<planeVertx[2]<<endl;
+//		cout<<"4 max x"<<maxX<<", min x: "<<minX<<", max y: "<<maxY<<", min y: "<<minY<<endl;
+		if(planeVertx[0]>maxX){ 	maxX=planeVertx[0]; }
+		if(planeVertx[0]<minX){ 	minX=planeVertx[0]; }
+		if(planeVertx[1]>maxY){ 	maxY=planeVertx[1]; }
+		if(planeVertx[1]<minY){		minY=planeVertx[1]; }
+
+		reduction_WS[0]= (maxX+minX)/2.0;
+		reduction_WS[1]= (maxY+minY)/2.0;
+		reduction_WS[3]=maxX-minX;
+		reduction_WS[4]=maxY-minY;
+		cout<<"max x: "<<maxX<<", min x: "<<minX<<", max y: "<<maxY<<", min y: "<<minY<<endl;
+		cout<<"Reduced ws: "<<reduction_WS[0]<<" "<<reduction_WS[1]<<" "<<reduction_WS[2]<<", "<<reduction_WS[3]<<" "<<reduction_WS[4]<<" "<<reduction_WS[5]<<endl;
 	}
 	//		else if(actionParameter[0]=="cylinder")
 	else

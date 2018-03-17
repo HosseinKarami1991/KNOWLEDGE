@@ -1018,6 +1018,46 @@ bool pittObjects::Plane::GraspingPosition(void){
 	Frame tempApproachScrew4(name,approachScrew4Pose);
 	objectFrames.push_back(tempApproachScrew4);
 	name.clear();
+
+
+	float vertexPose[]={0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+	vertexPose[3]=vertices[0][0];vertexPose[4]=vertices[0][1];vertexPose[5]=vertices[0][2];
+	name.push_back("VertexPose");
+	name.push_back("VertexPose1");
+	Frame tempVertex1(name,vertexPose);
+	objectFrames.push_back(tempVertex1);
+	name.clear();
+
+	vertexPose[3]=vertices[1][0];vertexPose[4]=vertices[1][1];vertexPose[5]=vertices[1][2];
+	name.push_back("VertexPose");
+	name.push_back("VertexPose2");
+	Frame tempVertex2(name,vertexPose);
+	objectFrames.push_back(tempVertex2);
+	name.clear();
+
+	vertexPose[3]=vertices[2][0];vertexPose[4]=vertices[2][1];vertexPose[5]=vertices[2][2];
+	name.push_back("VertexPose");
+	name.push_back("VertexPose3");
+	Frame tempVertex3(name,vertexPose);
+	objectFrames.push_back(tempVertex3);
+	name.clear();
+
+	vertexPose[3]=vertices[3][0];vertexPose[4]=vertices[3][1];vertexPose[5]=vertices[3][2];
+	name.push_back("VertexPose");
+	name.push_back("VertexPose4");
+	Frame tempVertex4(name,vertexPose);
+	objectFrames.push_back(tempVertex4);
+	name.clear();
+
+
+
+
+
+
+
+
+
 	return true;
 }
 
