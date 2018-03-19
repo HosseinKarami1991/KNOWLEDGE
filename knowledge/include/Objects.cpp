@@ -225,6 +225,11 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 	objFrame[4]=trackedShape.y_est_centroid;
 	objFrame[5]=trackedShape.z_est_centroid;
 
+	if(objFrame[4]>0)
+		objFrame[3]+=0.02;
+	else
+		objFrame[3]+=0.005;
+
 	if (abs(normalAxis[2])> VERTICAL_THRESHOLD)
 	{
 
