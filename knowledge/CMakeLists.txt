@@ -53,6 +53,9 @@ add_library(Objects include/Objects.cpp)
 add_executable(knowledge src/knowledge_main.cpp )
 
 add_dependencies(knowledge baxter_core_msgs_generate_messages_cpp  geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp)
+
+add_dependencies(Objects baxter_core_msgs_generate_messages_cpp  geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp)
+
 ## Specify libraries to link a library or executable target against
 target_link_libraries(knowledge
    ${catkin_LIBRARIES}
@@ -60,4 +63,3 @@ Objects
 #Points
 #World
  )
-#target_link_libraries(Objects pitt_msgs)
