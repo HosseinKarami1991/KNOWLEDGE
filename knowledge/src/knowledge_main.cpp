@@ -51,7 +51,7 @@ void CallBackShapes(const TrackedShapes& outShapes);
 bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter, float* WS);
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
 
-ros::Publisher	pub_KBAck;
+ros::Publisher	pub_KBAck, pub_pitt_runner;
 int main(int argc, char **argv)
 {
 
@@ -71,7 +71,8 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_LeftQ  =nh.subscribe("Q_leftArm" ,10, CallBackJointValues_LeftArm);
 	ros::Subscriber sub_RightQ =nh.subscribe("Q_rightArm",10, CallBackJointValues_RightArm);
 	ros::Subscriber sub_UpdateKB =nh.subscribe("robot_KB_command",10, CallBackUpdateKB);
-	pub_KBAck=nh.advertise<controlCommnad_msgs::controlGoalReachAck>("robot_control_ack",80);;
+	pub_KBAck=nh.advertise<controlCommnad_msgs::controlGoalReachAck>("robot_control_ack",80);
+	pub_pitt_runner=nh.advertise<std_msgs::String>("PerceptionRunner",80);
 
 
 	const char* home=getenv("HOME");
@@ -102,6 +103,12 @@ int main(int argc, char **argv)
 		cout<<i<<endl;
 		worldVec[i].Print();
 	}
+
+	usleep(0.5e6);
+	std_msgs::String ackMsgStr;
+	ackMsgStr.data="RUN_PITT";
+	pub_pitt_runner.publish(ackMsgStr);
+	usleep(0.5e6);
 
 	cout << "*****************" << endl;
 	cout << "Knowledge Representation is alive: " << endl;
@@ -314,6 +321,10 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			ackMsg.ctrlCmndTypeAck=0;
 			pub_KBAck.publish(ackMsg);
 
+			std_msgs::String ackMsgStr;
+			ackMsgStr.data="KILL_PITT";
+			pub_pitt_runner.publish(ackMsgStr);
+
 			obj_call_back_flag=false;
 
 
@@ -324,6 +335,11 @@ void CallBackShapes(const TrackedShapes& outShapes){
 
 
 void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Reduce_cylinder 0 ...
+
+	std_msgs::String ackMsgStr;
+	ackMsgStr.data="RUN_PITT";
+	pub_pitt_runner.publish(ackMsgStr);
+
 
 	cout<<FRED(BOLD("CallBackUpdateKB"))<<endl;
 	string Msg=msg->data.c_str();

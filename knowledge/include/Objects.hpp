@@ -226,7 +226,7 @@ public:
 
 	virtual void BoundingBox(void){};
 	virtual void BoundingBall(void){};
-	virtual bool GraspingPosition(void){};//! Define the grasping and approaching position for robot
+	virtual bool GraspingPosition(void){ return true;};//! Define the grasping and approaching position for robot
 	virtual void FrameSet(void){};
 };
 // =======================================

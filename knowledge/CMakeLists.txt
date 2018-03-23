@@ -23,23 +23,27 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 	pitt_msgs
 	knowledge_msgs
-
+  actionlib
 )
+catkin_python_setup()
+
 include_directories(
-	INCLUDE_DIRS
+  ${catkin_INCLUDE_DIRS}
 	include/
 )
 
+
+
 #Is for add the .o files to devel/lib
 
-catkin_package(  CATKIN_DEPENDS baxter_core_msgs message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs pitt_msgs)
+catkin_package(	INCLUDE_DIRS include
+								CATKIN_DEPENDS baxter_core_msgs message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs pitt_msgs)
+
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
+
 
 #ADD_LIBRARY(endor /home/nasa/Documents/Endor/endor-master/aograph.cpp)
 add_library(Objects include/Objects.cpp)
@@ -60,6 +64,8 @@ add_dependencies(Objects baxter_core_msgs_generate_messages_cpp  geometry_msgs_g
 target_link_libraries(knowledge
    ${catkin_LIBRARIES}
 Objects
-#Points
-#World
- )
+)
+
+catkin_install_python(PROGRAMS scripts/pitt_runner.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

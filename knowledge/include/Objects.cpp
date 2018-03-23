@@ -599,7 +599,7 @@ bool pittObjects::Plane::GraspingPosition(void){
 	///////////////////////////////////////////////
 	///////////////////////////////////////////////
 	// check if at least three points are theoretically can make a rectangle, if not return false;
-	vector<float> foundVertex;foundVertex.resize(3,0.0);
+/*	vector<float> foundVertex;foundVertex.resize(3,0.0);
 	vector<vector<float>> foundVertices;foundVertices.resize(4,foundVertex);
 
 
@@ -636,7 +636,7 @@ bool pittObjects::Plane::GraspingPosition(void){
 	else
 	{
 		return false;
-	}
+	}*/
 
 	///////////////////////////////////////////////
 	///////////////////////////////////////////////
