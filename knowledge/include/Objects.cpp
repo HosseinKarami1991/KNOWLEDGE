@@ -161,6 +161,8 @@ void pittObjects::Cylinder::BoundingBall(void){
 bool pittObjects::Cylinder::GraspingPosition(void){
 	cout<<"Cylinder::GraspingPosition"<<endl;
 
+	float ErrorCorrection[]={0.005, 0.01,0.0};
+
 	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6], objFrameFirstGoal[6];
 	float FirstGoalDistance=0.05;// the first goal of the moving cylinder in order to collide with the plate
 
@@ -221,9 +223,9 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 	 *
 	 * */
 	float objFrame[]={0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-	objFrame[3]=trackedShape.x_est_centroid;
-	objFrame[4]=trackedShape.y_est_centroid;
-	objFrame[5]=trackedShape.z_est_centroid;
+	objFrame[3]=trackedShape.x_est_centroid +ErrorCorrection[0];
+	objFrame[4]=trackedShape.y_est_centroid +ErrorCorrection[1];
+	objFrame[5]=trackedShape.z_est_centroid +ErrorCorrection[2];
 
 //	if(objFrame[4]>0)
 //		objFrame[3]+=0.02;
@@ -551,6 +553,7 @@ bool pittObjects::Plane::GraspingPosition(void){
 	cout<<"|     p3    ---------   p1         "<<endl;
 	cout<<" ----> Y (X)                         "<<endl;
 
+	float ErrorCorrection[]={0.0, 0.01,0.0};
 	/*!
 		1- find the two point on the left for the left arm, and the two point on the right for the right arm
 		2- Find the grasping position for the left and right arm based on the the two left/right points, and maybe also center point
@@ -572,27 +575,27 @@ bool pittObjects::Plane::GraspingPosition(void){
 	vector<vector<float>> verticesOld, vertices;
 	vector<float> vertex, center, planeCoef;
 	// [0 1 2 3]: a, b,c,d
-	vertex.push_back(trackedShape.coefficients[4]);
-	vertex.push_back(trackedShape.coefficients[5]);
-	vertex.push_back(trackedShape.coefficients[6]);
+	vertex.push_back(trackedShape.coefficients[4]+ErrorCorrection[0]);
+	vertex.push_back(trackedShape.coefficients[5]+ErrorCorrection[1]);
+	vertex.push_back(trackedShape.coefficients[6]+ErrorCorrection[2]);
 	verticesOld.push_back(vertex);
 	vertex.clear();
 
-	vertex.push_back(trackedShape.coefficients[7]);
-	vertex.push_back(trackedShape.coefficients[8]);
-	vertex.push_back(trackedShape.coefficients[9]);
+	vertex.push_back(trackedShape.coefficients[7]+ErrorCorrection[0]);
+	vertex.push_back(trackedShape.coefficients[8]+ErrorCorrection[1]);
+	vertex.push_back(trackedShape.coefficients[9]+ErrorCorrection[2]);
 	verticesOld.push_back(vertex);
 	vertex.clear();
 
-	vertex.push_back(trackedShape.coefficients[10]);
-	vertex.push_back(trackedShape.coefficients[11]);
-	vertex.push_back(trackedShape.coefficients[12]);
+	vertex.push_back(trackedShape.coefficients[10]+ErrorCorrection[0]);
+	vertex.push_back(trackedShape.coefficients[11]+ErrorCorrection[1]);
+	vertex.push_back(trackedShape.coefficients[12]+ErrorCorrection[2]);
 	verticesOld.push_back(vertex);
 	vertex.clear();
 
-	vertex.push_back(trackedShape.coefficients[13]);
-	vertex.push_back(trackedShape.coefficients[14]);
-	vertex.push_back(trackedShape.coefficients[15]);
+	vertex.push_back(trackedShape.coefficients[13]+ErrorCorrection[0]);
+	vertex.push_back(trackedShape.coefficients[14]+ErrorCorrection[1]);
+	vertex.push_back(trackedShape.coefficients[15]+ErrorCorrection[2]);
 	verticesOld.push_back(vertex);
 	vertex.clear();
 
@@ -642,9 +645,9 @@ bool pittObjects::Plane::GraspingPosition(void){
 	///////////////////////////////////////////////
 
 
-	center.push_back(trackedShape.x_pc_centroid);//x
-	center.push_back(trackedShape.y_pc_centroid);//y
-	center.push_back(trackedShape.z_pc_centroid);//z
+	center.push_back(trackedShape.x_pc_centroid+ErrorCorrection[0]);//x
+	center.push_back(trackedShape.y_pc_centroid+ErrorCorrection[1]);//y
+	center.push_back(trackedShape.z_pc_centroid+ErrorCorrection[2]);//z
 	for(int i=0;i<4;i++)
 		planeCoef.push_back(trackedShape.coefficients[i]); //a,b,c,d
 
