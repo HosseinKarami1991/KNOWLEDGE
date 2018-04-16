@@ -78,6 +78,7 @@ int main(int argc, char **argv)
 	const char* home=getenv("HOME");
 	string pointPath(home);
 	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TableAssembly.txt";
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 
 	readPointsVector(pointPath, worldVec);
 	left_q_index=worldVec.size();
@@ -109,10 +110,10 @@ int main(int argc, char **argv)
 	ackMsgStr.data="RUN_PITT";
 	pub_pitt_runner.publish(ackMsgStr);
 	usleep(0.5e6);
-
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	cout << "*****************" << endl;
 	cout << "Knowledge Representation is alive: " << endl;
-
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	ros::spin();
 	return 1;
 }
@@ -122,7 +123,7 @@ int main(int argc, char **argv)
 
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res){
 	cout<<FBLU(BOLD("A Knowledge Query is arrived:"))<<endl;
-
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	string type=req.reqType;
 	string name=req.Name;
 	string requestInfo=req.requestInfo;
@@ -178,12 +179,14 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 						cout<<worldVec[i].value[m]<<" ";
 					}
 					cout<<endl;
+					cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 					return true;// normally when ask for a vector value, it is just one vector value
 				}
 				break; // if a index of world vec happened, the same index should be passed and not happen again.
 			}
 		}
 	}
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	return true;
 };
 
@@ -223,6 +226,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 	{
 		int	perceivedNoSphere=0, perceivedNoCylinder=0, perceivedNoPlane=0, perceivedNoCone=0, perceivedNoUnknown=0;
 		objectsVector.clear();
+		cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 
 		for (int i=0;i<outShapes.tracked_shapes.size();i++)
 		{
@@ -324,7 +328,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 			std_msgs::String ackMsgStr;
 			ackMsgStr.data="KILL_PITT";
 			pub_pitt_runner.publish(ackMsgStr);
-
+			cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 			obj_call_back_flag=false;
 
 
@@ -335,7 +339,7 @@ void CallBackShapes(const TrackedShapes& outShapes){
 
 
 void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Reduce_cylinder 0 ...
-
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	std_msgs::String ackMsgStr;
 	ackMsgStr.data="RUN_PITT";
 	pub_pitt_runner.publish(ackMsgStr);
