@@ -164,7 +164,7 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 	float ErrorCorrection[]={0.005, 0.01,0.0};
 
 	float graspPose[6]; float approachingPose[6] , objFrameScrewingPose[6], objFrameFirstGoal[6];
-	float FirstGoalDistance=0.05;// the first goal of the moving cylinder in order to collide with the plate
+	float FirstGoalDistance=0.10;// the first goal of the moving cylinder in order to not collide with the plate
 
 	Eigen::Vector3f Vec_ObjFr2GraspFr, vec_Grasping; //YPR
 	Eigen::Matrix3f Rot_Obj2Grasp, Rot_Grasping,RotMat;
@@ -198,14 +198,15 @@ bool pittObjects::Cylinder::GraspingPosition(void){
 
 
 	radius= trackedShape.coefficients[6];
-//	height= trackedShape.coefficients[7];
-	height= 0.25;
+	double height2= trackedShape.coefficients[7];
+	height= trackedShape.coefficients[7];
+//	height= 0.20;
 
 	normalAxis[0]=trackedShape.coefficients[3];
 	normalAxis[1]=trackedShape.coefficients[4];
 	normalAxis[2]=trackedShape.coefficients[5];
 	cout<<"-------------------"<<endl;
-	cout<<"RADIUS:"<<radius<<" HEIGHT:"<<height<<endl;
+	cout<<"RADIUS:"<<radius<<" HEIGHT:"<<height<<"real height: "<<height2<<endl;
 	cout<<"-------------------"<<endl;
 	float VERTICAL_THRESHOLD=0.99;
 	float VERTICAL_GRASPING_POINT_THRESHOLD=0.08;// 5 cm from top we grasp the object
@@ -890,23 +891,34 @@ bool pittObjects::Plane::GraspingPosition(void){
 
 	// we use the frames on the center frame (= gp1 frame) in order to find the vectors to move from vertices of the plate to the screw poses
 	Eigen::Vector3f screw1, screw2, screw3, screw4, approachScrew1, approachScrew2, approachScrew3, approachScrew4 ;// grasping Position 1 (p1+p2/2) and 2 (p3+p4/2).
+	Eigen::Vector3f exitScrew1, exitScrew2, exitScrew3,exitScrew4; // after screwing goes to this pose
 
 	screw1={vertices[0][0], vertices[0][1],vertices[0][2]};
 	screw2={vertices[1][0], vertices[1][1],vertices[1][2]};
 	screw3={vertices[2][0], vertices[2][1],vertices[2][2]};
 	screw4={vertices[3][0], vertices[3][1],vertices[3][2]};
 
-	screw1=screw1+SCREW_DIS* X1_grasp; screw1=screw1+SCREW_DIS* Z1_grasp; screw1=screw1-SCREW_LENGTH* Y1_grasp;
-	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-SCREW_LENGTH* Y1_grasp;
-	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-SCREW_LENGTH* Y1_grasp;
-	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-SCREW_LENGTH* Y1_grasp;
+	screw1=screw1+SCREW_DIS* X1_grasp; screw1=screw1+SCREW_DIS* Z1_grasp; screw1=screw1-1.2*SCREW_LENGTH* Y1_grasp;
+	screw2=screw2-SCREW_DIS* X1_grasp; screw2=screw2+SCREW_DIS* Z1_grasp; screw2=screw2-1.2*SCREW_LENGTH* Y1_grasp;
+	screw3=screw3+SCREW_DIS* X1_grasp; screw3=screw3-SCREW_DIS* Z1_grasp; screw3=screw3-1.5*SCREW_LENGTH* Y1_grasp;
+	screw4=screw4-SCREW_DIS* X1_grasp; screw4=screw4-SCREW_DIS* Z1_grasp; screw4=screw4-1.5*SCREW_LENGTH* Y1_grasp;
 
 	approachScrew1=screw1; approachScrew2=screw2; approachScrew3=screw3; approachScrew4=screw4;
 
-	approachScrew1=approachScrew1-2.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew2=approachScrew2-2.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew3=approachScrew3-2.0*SCREW_LENGTH* Y1_grasp;
-	approachScrew4=approachScrew4-2.0*SCREW_LENGTH* Y1_grasp;
+//	screw1=screw1+0.5*SCREW_LENGTH* Y1_grasp; // 0.5 screw length above the plate in z direction for screwing pose
+//	screw2=screw2+0.5*SCREW_LENGTH* Y1_grasp;
+//	screw3=screw3+0.5*SCREW_LENGTH* Y1_grasp;
+//	screw4=screw4+0.5*SCREW_LENGTH* Y1_grasp;
+
+
+
+	approachScrew1=approachScrew1-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew2=approachScrew2-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew3=approachScrew3-3.0*SCREW_LENGTH* Y1_grasp;
+	approachScrew4=approachScrew4-3.0*SCREW_LENGTH* Y1_grasp;
+
+
+
 
 	Eigen::Vector3f screw1Euler, screw2Euler, screw3Euler, screw4Euler; // Pi,0,PI
 
