@@ -12,6 +12,9 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/String.h>
 #include "controlCommnad_msgs/controlGoalReachAck.h"
+#include<mocap_msgs/mocapvector.h>
+#include <cmath>
+
 
 
 #define RST  "\x1B[0m"
@@ -25,16 +28,18 @@
 
 typedef ::pitt_msgs::TrackedShapes_<std::allocator<void> > TrackedShapes;
 typedef ::pitt_msgs::TrackedShape_<std::allocator<void> > TrackedShape;
+// ::mocap::GetPoseFromMocapMsg<std::allocator<void> > trackedobjects;
 
 using namespace std;
 using namespace pitt_msgs;
-
+string last_msg ="";
 // global variables:
 vector<shared_ptr<pittObjects::Objects>> objectsVector;
+//mocap_msgs::mocapvector objvec;
 
 vector<World> worldVec;
-int left_q_index,right_q_index;
-int kb_update_arm , kb_update_counter=0;
+int left_q_index,right_q_index,qr_index,nextindex,lastindex,removedindex,youbot_q_index,finalbox_q_index,lastobjstatus=2;
+int kb_update_arm , kb_update_counter=0,kbobjindex;
 
 int NumberSphere=0, NumberCylinder=4, NumberUnknown=0, NumberCone=0,NumberPlane=1;
 
@@ -43,15 +48,23 @@ float perception_regionOperating[6], reduction_WS[6];
 
 // functions Def:
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg);
+void CallBackJointValues_leftarmbaxter(const std_msgs::Float64MultiArray& msg);
 void CallBackJointValues_RightArm(const std_msgs::Float64MultiArray& msg);
 void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg);
-
+void CallBackUpdateKBkinect(const std_msgs::String::ConstPtr& msg);
 void CallBackShapes(const TrackedShapes& outShapes);
+void CallBackkinect(const std_msgs::String::ConstPtr& msg);
+void CallBackkinectupdate(const std_msgs::String::ConstPtr& msg);
 
+void CallBackmocap(const mocap_msgs::mocapvector::ConstPtr& mocvec);
+void CallBackUpdateKByoubot(const std_msgs::String::ConstPtr& msg);
+int findclosestobject();
 bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter, float* WS);
 bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::knowledgeSRV::Response &res);
-
+int numobj;
 ros::Publisher	pub_KBAck, pub_pitt_runner;
+ros::Publisher pubToRobotDisplay;
+
 int main(int argc, char **argv)
 {
 
@@ -68,29 +81,62 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 
 	ros::Subscriber sub_shapes =nh.subscribe("ransac_segmentation/trackedShapes",10, CallBackShapes);
-	ros::Subscriber sub_LeftQ  =nh.subscribe("Q_leftArm" ,10, CallBackJointValues_LeftArm);
+	ros::Subscriber sub_LeftQ  =nh.subscribe("Q_youbotarm" ,10, CallBackJointValues_LeftArm);
 	ros::Subscriber sub_RightQ =nh.subscribe("Q_rightArm",10, CallBackJointValues_RightArm);
+	ros::Subscriber sub_leftQbaxter =nh.subscribe("Q_leftArm",10, CallBackJointValues_leftarmbaxter);
 	ros::Subscriber sub_UpdateKB =nh.subscribe("robot_KB_command",10, CallBackUpdateKB);
+	ros::Subscriber sub_UpdateKByoubot =nh.subscribe("youbot_KB_command",10, CallBackUpdateKByoubot);
+
+	ros::Subscriber sub_UpdateKBkinect =nh.subscribe("kinect_KB_command",10, CallBackUpdateKBkinect);
+
 	pub_KBAck=nh.advertise<controlCommnad_msgs::controlGoalReachAck>("robot_control_ack",80);
 	pub_pitt_runner=nh.advertise<std_msgs::String>("PerceptionRunner",80);
+      pubToRobotDisplay=nh.advertise<std_msgs::String>("robotDisplayText",20);
+
+
+	ros::Subscriber sub_kinect =nh.subscribe("obj_status",10, CallBackkinect);
+	ros::Subscriber sub_kinect_update =nh.subscribe("obj_status_update",10, CallBackkinectupdate);
+	ros::Subscriber sub_mocap =nh.subscribe("object_ctrl_1",10, CallBackmocap);
+
+
+	
 
 
 	const char* home=getenv("HOME");
 	string pointPath(home);
-	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_TableAssembly.txt";
+	pointPath=pointPath+"/catkin_ws/src/KNOWLEDGE/knowledge/files/points_simpletask.txt";
 	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 
 	readPointsVector(pointPath, worldVec);
 	left_q_index=worldVec.size();
 	right_q_index=worldVec.size()+1;
-	worldVec.resize(worldVec.size()+2);
+	qr_index=worldVec.size()+2;
+	nextindex=worldVec.size()+3;
+	lastindex=worldVec.size()+4;
+	removedindex=worldVec.size()+5;
+	youbot_q_index=worldVec.size()+6;
+	finalbox_q_index=worldVec.size()+7;
+	worldVec.resize(worldVec.size()+8);
 
 	worldVec[left_q_index].name.push_back("LeftArm_q");
 	worldVec[right_q_index].name.push_back("RightArm_q");
 	worldVec[left_q_index].name.push_back("Pose");
 	worldVec[right_q_index].name.push_back("Pose");
-
-
+	worldVec[qr_index].name.push_back("qr");
+	worldVec[qr_index].name.push_back("status");
+	worldVec[qr_index].value.push_back(2);
+	worldVec[nextindex].name.push_back("nextplace");
+	worldVec[nextindex].name.push_back("Pose");
+	worldVec[nextindex].value.push_back(1);
+	worldVec[lastindex].name.push_back("lastcloseobj");
+	worldVec[lastindex].name.push_back("index");
+	worldVec[removedindex].name.push_back("removedobjects");
+	worldVec[removedindex].name.push_back("index");
+    worldVec[removedindex].value.push_back(5);
+    worldVec[youbot_q_index].name.push_back("youbot_q");
+    worldVec[youbot_q_index].name.push_back("Pose");
+    worldVec[finalbox_q_index].name.push_back("finalboxpose");
+    worldVec[finalbox_q_index].name.push_back("Pose");
 	cout<<"left_q_index: "<<left_q_index<<"right_q_index: "<<right_q_index<<endl;
 	worldVec[left_q_index].Print();
 	worldVec[right_q_index].Print();
@@ -193,6 +239,15 @@ bool KnowledgeQuery(knowledge_msgs::knowledgeSRV::Request &req, knowledge_msgs::
 
 
 void CallBackJointValues_LeftArm(const std_msgs::Float64MultiArray& msg){
+	vector<float> leftQ;
+	for (int i=0;i<5;i++)
+		leftQ.push_back(msg.data[i]);
+	worldVec[youbot_q_index].value=leftQ;
+
+	//	worldVec[left_q_index].Print();
+
+};
+void CallBackJointValues_leftarmbaxter(const std_msgs::Float64MultiArray& msg){
 	vector<float> leftQ;
 	for (int i=0;i<7;i++)
 		leftQ.push_back(msg.data[i]);
@@ -337,7 +392,25 @@ void CallBackShapes(const TrackedShapes& outShapes){
 
 };
 
-
+void CallBackUpdateKBkinect(const std_msgs::String::ConstPtr& msg){
+	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
+	cout<<FRED(BOLD("CallBackUpdateKBkinect"))<<endl;
+    string msgdata=msg->data.c_str();
+    knowledge_msgs::knowledgeSRV::Request request;
+	knowledge_msgs::knowledgeSRV::Response response;
+    request.reqType=msgdata;
+	request.requestInfo="Pose";
+	KnowledgeQuery(request,response);
+	std::vector<float> finalboxpose;
+	for(int i=0;i<7;i++){finalboxpose.push_back(response.pose[i]);}
+	World inst1;
+ 
+   
+    
+    worldVec[finalbox_q_index].value.clear();
+    
+     for(int i=0;i<7;i++){worldVec[finalbox_q_index].value.push_back(finalboxpose[i]);}
+}
 void CallBackUpdateKB(const std_msgs::String::ConstPtr& msg){ //Reduce_WS 1 Reduce_cylinder 0 ...
 	cout<<FBLU("Time: ")<<to_string(ros::Time::now().toSec())<<endl;
 	std_msgs::String ackMsgStr;
@@ -470,6 +543,34 @@ cout<<"WS: "<<reduction_WS[0]<<" "<<reduction_WS[1]<<" "<<reduction_WS[2]<<" "<<
 kb_update_counter++;
 
 };
+void CallBackUpdateKByoubot(const std_msgs::String::ConstPtr& msg){
+     string mmsg = msg->data.c_str();
+     vector<string> msgvector;
+	boost::split(msgvector, mmsg, boost::is_any_of(" "));
+     ROS_INFO_STREAM("i heard "<<mmsg<<" from youbot kb callback");
+     if(msgvector[0]=="gotohuman"){
+
+      worldVec[nextindex].value.push_back(10);
+     }
+     else if (msgvector[0]=="gotonextobject"){
+     int on =findclosestobject();
+     cout<<"closest object is: "<<on<<endl;
+      worldVec[nextindex].value.push_back(on);
+       
+      worldVec[nextindex].Print();
+     }
+     else if (msgvector[0]=="removeobject")
+     {
+       
+        vector<float> v =worldVec[lastindex].value;
+        
+  
+        worldVec[removedindex].value.push_back(v.back());
+        worldVec[removedindex].Print();
+     }
+
+
+};
 
 
 
@@ -495,5 +596,152 @@ bool IsPerceivedObjectInsideWS(string ObjectName, float *ObjectCenter, float* WS
 	}
 
 	return isObjectInWS;
-};
+}
+
+void CallBackkinect(const std_msgs::String::ConstPtr& msg){
+	string objstatus  = msg->data.c_str();
+    int singleobjstatus;
+    if(objstatus=="faulty")
+    	{singleobjstatus=0; 
+    }
+    else if (objstatus=="not_faulty")
+    	{singleobjstatus=1;
+        }
+    else if(objstatus=="NA")
+    	{singleobjstatus=2;
+        }
+    //    cout<<"objectstatus : "<<singleobjstatus<<endl;
+   // cout<<"lastobjstatus: "<<lastobjstatus<<endl;
+    cout<<"objstatus: "<<objstatus<<endl;
+  if(singleobjstatus!=lastobjstatus ){worldVec[qr_index].value.push_back(singleobjstatus);}
+   
+ //if (NumberCylinder+worldVec[qr_index].value.size()!=4){worldVec[qr_index].value.push_back(2);}
+    //lastobjstatus=singleobjstatus;
+	//worldVec[qr_index].Print();
+	std_msgs::String msg2;
+	int a = (int)worldVec[qr_index].value.back();
+	cout <<"object is ********"<<a<<endl;
+	if (a==0){msg2.data="faulty";}
+	else if (a==1){msg2.data="not_faulty";}
+	else if (a==2){msg2.data="NA";}	
+	pubToRobotDisplay.publish(msg2);
+  worldVec[qr_index].Print();
+   lastobjstatus=singleobjstatus;
+}
+void CallBackkinectupdate(const std_msgs::String::ConstPtr& msg){
+
+  NumberCylinder--;
+     cout<<"there are cylinder: ************"<<NumberCylinder<<endl;
+worldVec[qr_index].Print();
+}
+
+
+void CallBackmocap(const mocap_msgs::mocapvector::ConstPtr& mocvec){
+	//cout<<"**************"<<mocvec<<endl;
+	 //cout<<"size is "<<mocvec->objects.size()<<endl;
+	 numobj = mocvec->objects.size();
+	 vector<float> mocapposvec;
+	 for(vector<World>::iterator it=worldVec.begin(); it!=worldVec.end(); )
+		{if(it->name[1]=="MocapPose")
+			{worldVec.erase(it);}
+			else{it++;}}
+	for (int i=0; i<mocvec->objects.size(); ++i)
+
+    {
+     
+    	const  mocap::GetPoseFromMocapMsg &obj = mocvec->objects[i];
+    	if(obj.index==0){
+    		World inst;
+    		inst.name.push_back("youbotpos");
+    		inst.name.push_back("MocapPose");
+            inst.value.push_back(obj.mocap.x);
+            inst.value.push_back(obj.mocap.y);
+            inst.value.push_back(obj.mocap.z);
+            inst.value.push_back(obj.mocap.yaw);
+    		worldVec.push_back(inst);
+    		
+    	}
+
+    		
+    	
+    	else{
+    		World inst;
+    		string objindex="objectpos"+to_string(obj.index);
+           	inst.name.push_back(objindex);
+    		inst.name.push_back("MocapPose");
+            inst.value.push_back(obj.mocap.x);
+            inst.value.push_back(obj.mocap.y);
+            inst.value.push_back(obj.mocap.z);
+            inst.value.push_back(obj.mocap.yaw);
+    		worldVec.push_back(inst);
+    		
+    	}
+        
+      // cout<<"x: " << obj.mocap.y << "y: " << obj.mocap.x<<endl;
+     // ROS_INFO_STREAM("UL: " << obj.mocap.y << "UR: " << obj.mocap.x);
+                      
+    
+}
+            //for(int i=0;i<worldVec.size();i++)
+			//	worldVec[i].Print();
+			//	cout<<"worldVec size is : "<<worldVec.size()<<endl;
+			//	cout<<"there are # objects "<<mocvec->objects.size()<<endl;
+}
+
+int findclosestobject(){
+	vector<float> vy,vobj,dis;
+    knowledge_msgs::knowledgeSRV::Request request;
+	knowledge_msgs::knowledgeSRV::Response response;
+    request.reqType="youbotpos";
+	request.requestInfo="MocapPose";
+    KnowledgeQuery(request,response);
+    vy.push_back(response.pose[0]);//x youbot
+    vy.push_back(response.pose[1]);//y youbot
+    cout<<"vx and vy youbot is: "<<vy[0]<<vy[1]<<endl;
+    response.pose.clear();
+
+
+
+      vector<float> v=worldVec[removedindex].value;
+      cout<<"v and size is: "<<v[0]<<v.size()<<endl;
+      //int roin = (int)knowledge_msg.response.pose[0];
+      vector<float> tmp;
+      vector<string> availableobjn;
+      vector<vector<float>> availableobjv;
+	  for(vector<World>::iterator it=worldVec.begin(); it!=worldVec.end();){
+	  	for(int i=0;i<v.size();i++){
+			{if(it->name[1]=="MocapPose" && it->name[0]!="youbotpos" && it->name[1]!="objectpos"+to_string(v[i]) && it->value[2]<0.3)
+				{
+					cout<<"inside for "<<endl;
+				    availableobjn.push_back(it->name[0]);
+				    tmp.push_back(it->value[0]);
+				    tmp.push_back(it->value[1]);
+				    availableobjv.push_back(tmp);
+				    tmp.clear();
+
+				}
+				}
+	  	}
+	  	it++;
+	  }
+ for(int i=0;i<availableobjn.size();i++){
+       
+         dis.push_back(sqrt(pow(availableobjv[i][0]-vy[0],2)+pow(availableobjv[i][0]-vy[1],2)));
+
+
+ }
+	 int minElementIndex = std::min_element(dis.begin(),dis.end()) - dis.begin();
+	 double minElement = *std::min_element(dis.begin(), dis.end());
+	
+	 
+	 cout<<"object "<<availableobjn[minElementIndex]<<"is the closest one"<<endl;
+	 string na = availableobjn[minElementIndex];
+	 cout<<"na is"<<availableobjn[minElementIndex]<<endl;
+	 cout<<"na.substr(na.length()-2,na.length()-1)"<<na.substr(na.length()-1,na.length())<<endl;
+     int nu = stoi(na.substr(na.length()-1,na.length()));
+     worldVec[lastindex].value.push_back(nu);
+
+return nu;
+}
+
 

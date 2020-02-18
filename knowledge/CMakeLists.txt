@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
 	pitt_msgs
 	knowledge_msgs
   actionlib
+  mocap_msgs
 )
 catkin_python_setup()
 
@@ -36,7 +37,7 @@ include_directories(
 
 #Is for add the .o files to devel/lib
 
-catkin_package(	INCLUDE_DIRS include CATKIN_DEPENDS message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs pitt_msgs)# baxter_core_msgs 
+catkin_package(	INCLUDE_DIRS include CATKIN_DEPENDS message_generation roscpp rospy std_msgs geometry_msgs  knowledge_msgs pitt_msgs mocap_msgs)# baxter_core_msgs 
 
 
 ## Specify additional locations of header files
@@ -55,7 +56,7 @@ add_library(Objects include/Objects.cpp)
 # name  name.cpp
 add_executable(knowledge src/knowledge_main.cpp )
 
-add_dependencies(knowledge geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp) #baxter_core_msgs_generate_messages_cpp
+add_dependencies(knowledge geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp mocap_msgs_generate_messages_cpp) #baxter_core_msgs_generate_messages_cpp
 
 add_dependencies(Objects geometry_msgs_generate_messages_cpp knowledge_msgs_generate_messages_cpp pitt_msgs_generate_messages_cpp)#baxter_core_msgs_generate_messages_cpp
 
